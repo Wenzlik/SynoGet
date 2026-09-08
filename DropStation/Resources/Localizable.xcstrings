@@ -2305,6 +2305,266 @@
           }
         }
       }
+    },
+    "Web sign-in": {
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Webové přihlášení"
+          }
+        }
+      }
+    },
+    "Use push approval or web 2FA in DSM. Experimental.": {
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Potvrzení oznámením nebo webové 2FA v DSM. Experimentální."
+          }
+        }
+      }
+    },
+    "Experimental web sign-in": {
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Experimentální webové přihlášení"
+          }
+        }
+      }
+    },
+    "Web sign-in · Experimental": {
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Webové přihlášení · Experimentální"
+          }
+        }
+      }
+    },
+    "Use DSM’s web sign-in for push approval or web 2FA. Download Station compatibility is still being tested. Verification code sign-in remains available if access fails.": {
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Přihlaste se přes web DSM pomocí potvrzení oznámením nebo webového 2FA. Kompatibilitu s Download Station zatím testujeme. Pokud přístup selže, můžete se přihlásit ověřovacím kódem."
+          }
+        }
+      }
+    },
+    "Adds DSM web sign-in for testing push approval and web 2FA. Some NAS configurations reject Download Station access. Verification code sign-in stays available.": {
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zpřístupní webové přihlášení DSM pro testování potvrzení oznámením a webového 2FA. Některá nastavení NASu přístup k Download Station odmítají. Přihlášení ověřovacím kódem zůstává dostupné."
+          }
+        }
+      }
+    },
+    "Complete sign-in in DSM, then check access to Download Station.": {
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dokončete přihlášení v DSM a poté ověřte přístup k Download Station."
+          }
+        }
+      }
+    },
+    "Check Download Station access": {
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ověřit přístup k Download Station"
+          }
+        }
+      }
+    },
+    "Reload": {
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Načíst znovu"
+          }
+        }
+      }
+    },
+    "Trust this NAS certificate?": {
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Důvěřovat certifikátu tohoto NASu?"
+          }
+        }
+      }
+    },
+    "Trust and reload": {
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Důvěřovat a načíst znovu"
+          }
+        }
+      }
+    },
+    "Verify the SHA-256 fingerprint with your NAS administrator before trusting it. A changed certificate must be verified again.\n\n%@\n%@": {
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Před udělením důvěry ověřte otisk SHA-256 u správce NASu. Změněný certifikát je nutné znovu ověřit.\n\n%@\n%@"
+          }
+        }
+      }
+    },
+    "The NAS page could not load. Check the address, connection, and certificate, then reload.": {
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stránku NASu se nepodařilo načíst. Zkontrolujte adresu, připojení a certifikát a zkuste ji načíst znovu."
+          }
+        }
+      }
+    },
+    "The NAS page stopped responding. Reload to try again.": {
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stránka NASu přestala reagovat. Zkuste ji načíst znovu."
+          }
+        }
+      }
+    },
+    "Return to the configured NAS page before checking access.": {
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Před ověřením přístupu se vraťte na stránku nastaveného NASu."
+          }
+        }
+      }
+    },
+    "DSM has not confirmed the web session. Finish sign-in and 2FA, then check again. If this NAS does not support the handoff, use a verification code.": {
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "DSM nepotvrdilo webovou relaci. Dokončete přihlášení a dvoufázové ověření a zkuste to znovu. Pokud tento NAS předání relace nepodporuje, použijte ověřovací kód."
+          }
+        }
+      }
+    },
+    "No unambiguous NAS session was found. Finish sign-in or reload and try again.": {
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nepodařilo se jednoznačně určit relaci NASu. Dokončete přihlášení nebo stránku načtěte znovu."
+          }
+        }
+      }
+    },
+    "The web session could not be checked. Check the connection and try again, or cancel and use a verification code.": {
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Webovou relaci se nepodařilo ověřit. Zkontrolujte připojení a zkuste to znovu, nebo se vraťte a použijte ověřovací kód."
+          }
+        }
+      }
+    },
+    "Incorrect verification code. Try a new code.": {
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nesprávný ověřovací kód. Zkuste nový kód."
+          }
+        }
+      }
+    },
+    "DSM rejected Download Station access. Check this account’s application permissions in DSM, or sign in with a verification code. Web sign-in compatibility varies by NAS.": {
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "DSM odmítlo přístup k Download Station. Zkontrolujte oprávnění tohoto účtu k aplikacím v DSM nebo se přihlaste ověřovacím kódem. Podpora webového přihlášení se liší podle NASu."
+          }
+        }
+      }
+    },
+    "Download Station access could not be checked. Your web session is kept for this attempt. Check the connection and retry.": {
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Přístup k Download Station se nepodařilo ověřit. Webovou relaci pro tento pokus uchováváme. Zkontrolujte připojení a zkuste to znovu."
+          }
+        }
+      }
+    },
+    "Retry access check": {
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Znovu ověřit přístup"
+          }
+        }
+      }
+    },
+    "Web session received": {
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Webová relace přijata"
+          }
+        }
+      }
+    },
+    "Hide password": {
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skrýt heslo"
+          }
+        }
+      }
+    },
+    "Show password": {
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zobrazit heslo"
+          }
+        }
+      }
+    },
+    "Both actions clear the saved session and password. Your server address and preferences are kept.": {
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Obě akce smažou uloženou relaci i heslo. Adresa serveru a předvolby zůstanou zachovány."
+          }
+        }
+      }
     }
   },
   "version": "1.1"

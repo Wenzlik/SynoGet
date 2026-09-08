@@ -17,6 +17,7 @@ struct LoginView: View {
         )
     }
 
+    @AppStorage(AuthMethodSettings.experimentalEnabledKey) private var experimentalWebLogin = false
     @State private var scheme: ServerConfig.Scheme = .https
     @State private var host: String = ""
     @State private var port: String = "5001"
@@ -217,7 +218,7 @@ struct LoginView: View {
         // user-facing build hides the picker and shows the OTP form
         // unconditionally — Secure SignIn via WKWebView too often hits
         // Synology error 105 to expose to regular users yet.
-        if AuthMethodSettings.experimentalEnabled {
+        if experimentalWebLogin {
             authMethodPicker
             switch AuthMethodSettings.effective {
             case .otp:
@@ -292,6 +293,11 @@ struct LoginView: View {
     /// sheet. We just collect host details here and hand off.
     @ViewBuilder
     private var secureSignInCredentialsContent: some View {
+        Label("Experimental web sign-in", systemImage: "flask")
+            .font(.subheadline.weight(.medium))
+        Text("Use DSM’s web sign-in for push approval or web 2FA. Download Station compatibility is still being tested. Verification code sign-in remains available if access fails.")
+            .font(.callout).foregroundStyle(.secondary)
+
         DisclosureGroup(isExpanded: $serverExpanded) {
             serverConfigFields
         } label: {
@@ -304,11 +310,6 @@ struct LoginView: View {
             }
         }
         .padding(.vertical, 4)
-
-        Text("Tap Continue to open your NAS sign-in page. Enter your username and password there, then approve the push notification in Synology Secure SignIn.")
-            .font(.footnote)
-            .foregroundStyle(.secondary)
-            .padding(.vertical, 4)
 
         if case .error(let message) = session.state {
             inlineErrorLabel(message)
@@ -373,23 +374,28 @@ struct LoginView: View {
         IconField(systemImage: "number.square", placeholder: "6-digit code", text: $otpCode)
             .keyboardType(.numberPad)
             .textContentType(.oneTimeCode)
+            .disabled(session.isVerifyingOTP)
+            .onChange(of: otpCode) { _, value in
+                otpCode = String(value.filter { "0123456789".contains($0) }.prefix(6))
+            }
 
-        if case .error(let message) = session.state {
+        if let message = session.otpError {
             inlineErrorLabel(message)
         }
 
         signInButton(
             label: "Verify code",
-            isWorking: session.state == .authenticating
+            isWorking: session.isVerifyingOTP
         ) {
             Task { await session.submitOTP(otpCode) }
         }
-        .disabled(otpCode.count < 6 || session.state == .authenticating)
+        .disabled(otpCode.count != 6 || session.isVerifyingOTP)
 
         Button("Cancel", role: .cancel) {
             session.cancelTwoFactor()
             otpCode = ""
         }
+        .disabled(session.isVerifyingOTP)
         .font(.footnote)
         .frame(maxWidth: .infinity)
         .padding(.top, 4)
@@ -408,7 +414,7 @@ struct LoginView: View {
     private var validatingApiAccessContent: some View {
         VStack(spacing: DSSpacing.md) {
             stateDisc(systemImage: "checkmark.shield", tint: .accentColor)
-            DSEyebrow("Secure SignIn verified")
+            DSEyebrow("Web session received")
             Text("Checking Download Station access…")
                 .font(.headline.weight(.medium))
                 .multilineTextAlignment(.center)
@@ -435,12 +441,8 @@ struct LoginView: View {
     /// SID), retry the web sign-in, or sign out entirely.
     @ViewBuilder
     private func sessionUnauthorizedContent(reason: String) -> some View {
-        // Heuristic on the reason string keeps the state machine in
-        // SessionStore simple while still letting the view show
-        // case-appropriate copy. Both reasons originate in
-        // SessionStore so the contract is local.
-        let isExpiry = reason.localizedCaseInsensitiveContains("expired")
-        let title = isExpiry ? "Session expired" : "Re-authentication required"
+        let isExpiry = !session.isWebRecovery
+        let title = isExpiry ? "Session expired" : "Check Download Station access"
         let symbol = isExpiry ? "clock.badge.exclamationmark" : "exclamationmark.shield"
         let eyebrow: LocalizedStringKey = isExpiry ? "Session" : "Recovery"
 
@@ -458,24 +460,29 @@ struct LoginView: View {
             )
         )
 
-        // Primary recovery — switch to OTP. This is the only path
-        // that reliably mints a session DSM accepts for Download
-        // Station: auth.cgi with username + password + (optional)
-        // otp_code returns a SID scoped to whatever `session=` we
-        // ask for, including DownloadStation. The button signs the
-        // user out (preserving the password in Keychain so silent
-        // re-login can use it) and flips AuthMethod to .otp; they
-        // land back on the credentials form.
-        signInButton(label: "Re-authenticate with verification code", isWorking: false) {
-            Task { await session.switchToOTPAndSignOut() }
+        if session.canRetryWebValidation {
+            signInButton(label: "Retry access check", isWorking: false) {
+                Task { await session.retryWebValidation() }
+            }
+            Button("Re-authenticate with verification code") {
+                Task { await session.switchToOTPAndSignOut() }
+            }
+        } else {
+            signInButton(label: "Re-authenticate with verification code", isWorking: false) {
+                Task { await session.switchToOTPAndSignOut() }
+            }
         }
 
         // Secure SignIn retry is only exposed when the experimental
         // picker is on — otherwise we'd be offering the user a flow
         // they can't see anywhere else in the login UI.
-        if AuthMethodSettings.experimentalEnabled {
+        if experimentalWebLogin {
             Button {
-                Task { await session.retryWebSignIn() }
+                Task {
+                    await session.retryWebSignIn()
+                    authMethodRaw = AuthMethod.secureSignInWeb.rawValue
+                    presentWebSignIn()
+                }
             } label: {
                 Label("Try Secure SignIn", systemImage: "arrow.clockwise")
                     .font(.body.weight(.medium))
@@ -559,9 +566,8 @@ struct LoginView: View {
             HStack {
                 if isWorking {
                     ProgressView().tint(.white)
-                } else {
-                    Text(label).font(.body.weight(.semibold))
                 }
+                Text(LocalizedStringKey(label)).font(.body.weight(.semibold))
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 14)
@@ -649,7 +655,7 @@ private struct IconField: View {
             Image(systemName: systemImage)
                 .foregroundStyle(.secondary)
                 .frame(width: 22)
-            TextField(placeholder, text: $text)
+            TextField(LocalizedStringKey(placeholder), text: $text)
         }
         .loginFieldSurface()
     }
@@ -667,11 +673,11 @@ private struct IconSecureField: View {
                 .foregroundStyle(.secondary)
                 .frame(width: 22)
             if revealed {
-                TextField(placeholder, text: $text)
+                TextField(LocalizedStringKey(placeholder), text: $text)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
             } else {
-                SecureField(placeholder, text: $text)
+                SecureField(LocalizedStringKey(placeholder), text: $text)
             }
             Button {
                 revealed.toggle()
@@ -680,6 +686,7 @@ private struct IconSecureField: View {
                     .foregroundStyle(.secondary)
             }
             .buttonStyle(.plain)
+            .accessibilityLabel(revealed ? "Hide password" : "Show password")
         }
         .loginFieldSurface()
     }

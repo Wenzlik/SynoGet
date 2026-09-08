@@ -17,6 +17,7 @@ struct SettingsView: View {
     @AppStorage(AppearanceSettings.storageKey) private var appearanceRaw: String = AppearanceMode.system.rawValue
     @AppStorage(RememberSessionSettings.storageKey) private var rememberSession: Bool = true
     @AppStorage(PasswordPersistenceSettings.storageKey) private var rememberPassword: Bool = true
+    @AppStorage(AuthMethodSettings.experimentalEnabledKey) private var experimentalWebLogin = false
     @State private var confirmForget = false
 
     private var appearance: Binding<AppearanceMode> {
@@ -39,6 +40,7 @@ struct SettingsView: View {
                 if isSignedIn { accountSection }
                 appearanceSection
                 privacySection
+                if !isSignedIn { experimentalSignInSection }
                 feedbackSection
                 aboutSection
             }
@@ -60,6 +62,14 @@ struct SettingsView: View {
             } message: {
                 Text("Removes the saved session from the Keychain. Next sign-in will ask for your password and any 2FA code from scratch.")
             }
+        }
+    }
+
+    private var experimentalSignInSection: some View {
+        Section {
+            Toggle("Experimental web sign-in", isOn: $experimentalWebLogin)
+        } footer: {
+            Text("Adds DSM web sign-in for testing push approval and web 2FA. Some NAS configurations reject Download Station access. Verification code sign-in stays available.")
         }
     }
 
@@ -86,7 +96,7 @@ struct SettingsView: View {
                 settingsLabel("Forget this device", "trash", tint: .red)
             }
         } footer: {
-            Text("Sign out clears the saved session. Forget this device additionally removes any legacy credentials older builds may have stored.")
+            Text("Both actions clear the saved session and password. Your server address and preferences are kept.")
         }
     }
 

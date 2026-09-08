@@ -14,8 +14,8 @@ import Foundation
 ///   doesn't unblock that endpoint), so we open the real DSM web login
 ///   inside a `WKWebView` and let DSM run its own JavaScript-driven
 ///   challenge. The user signs in there, taps Approve in the Secure
-///   SignIn app, the web view detects the post-login redirect, and we
-///   harvest the session cookies for subsequent API calls.
+///   SignIn app, then explicitly checks access. The web view queries
+///   the documented token endpoint before handing off session cookies.
 enum AuthMethod: String, CaseIterable, Identifiable, Codable {
     case otp
     case secureSignInWeb
@@ -25,7 +25,7 @@ enum AuthMethod: String, CaseIterable, Identifiable, Codable {
     var label: String {
         switch self {
         case .otp:             return String(localized: "Verification code")
-        case .secureSignInWeb: return String(localized: "Secure SignIn app")
+        case .secureSignInWeb: return String(localized: "Web sign-in")
         }
     }
 
@@ -36,7 +36,7 @@ enum AuthMethod: String, CaseIterable, Identifiable, Codable {
         case .otp:
             return String(localized: "Enter a 6-digit code from a TOTP app.")
         case .secureSignInWeb:
-            return String(localized: "Approve a push notification in Synology Secure SignIn.")
+            return String(localized: "Use push approval or web 2FA in DSM. Experimental.")
         }
     }
 
@@ -54,15 +54,8 @@ enum AuthMethod: String, CaseIterable, Identifiable, Codable {
 enum AuthMethodSettings {
     static let storageKey = "auth.method"
 
-    /// Hidden flag that exposes the Secure SignIn web flow in the login
-    /// UI. Off by default for end users: the WKWebView round-trip works
-    /// fine at the DSM identity layer, but Synology routinely refuses
-    /// to extend that auth to the Download Station API (Synology error
-    /// 105), and the recovery card breaks the "just sign in" promise.
-    /// The flow's code stays compiled in — flip this flag (via
-    /// `defaults write com.wenzlik.DropStation auth.method.experimental
-    /// -bool YES` or a future debug toggle) to bring the picker back
-    /// for development.
+    /// Opt-in test flow, off by default. Settings exposes the switch with an
+    /// experimental label; real-NAS compatibility is required before promotion.
     static let experimentalEnabledKey = "auth.method.experimental"
 
     static var experimentalEnabled: Bool {
