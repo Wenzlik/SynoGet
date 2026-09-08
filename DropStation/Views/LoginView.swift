@@ -57,25 +57,18 @@ struct LoginView: View {
         .sheet(item: $webSignInURL) { wrapped in
             SecureSignInWebView(
                 loginURL: wrapped.url,
-                onSuccess: { sid, cookies in
+                onSuccess: { auth, cookies in
                     let captured = ServerConfig(
                         scheme: scheme,
                         host: host,
                         port: Int(port) ?? 5001,
-                        // The web flow doesn't expose which DSM user
-                        // signed in — DSM identifies the session purely
-                        // by SID at this point. Fall back to whatever
-                        // the user typed in the (now-hidden) form, or
-                        // an empty string if they used Secure SignIn
-                        // straight off the bat. The session probe will
-                        // populate state from the actual user later.
-                        account: account
+                        account: ""
                     )
                     webSignInURL = nil
                     Task {
                         await session.completeWebSignIn(
                             config: captured,
-                            sid: sid,
+                            auth: auth,
                             cookies: cookies
                         )
                     }

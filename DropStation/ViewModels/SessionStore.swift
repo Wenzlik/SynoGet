@@ -16,18 +16,17 @@ final class SessionStore: ObservableObject {
         /// Brief intermediate state after a Secure SignIn web sign-in:
         /// the WKWebView's auth round-trip succeeded, but we haven't yet
         /// confirmed Download Station accepts the resulting session.
-        /// Shown as "Secure SignIn verified. Checking Download Station
-        /// access…" with a spinner. Either flips to `.loggedIn` or
+        /// Shown as "Checking Download Station access…" with a spinner.
+        /// Either flips to `.loggedIn` or
         /// `.sessionUnauthorized` depending on the probe outcome.
         case validatingApiAccess
         /// Terminal "fully authenticated" state — Download Station API
         /// probe came back success=true. Only this state grants access
         /// to the main task list.
         case loggedIn
-        /// Web sign-in succeeded but DSM did not extend that auth to
-        /// the Download Station API (Synology error 105). Web identity
-        /// is verified; API identity is not. The recovery card offers
-        /// "Continue with OTP" and "Retry web login".
+        /// Download Station rejected the session, or a web candidate could
+        /// not be checked. Recovery offers retry when a candidate remains,
+        /// a fresh web login, and the verification-code fallback.
         case sessionUnauthorized(reason: String)
         /// The saved SID is still considered valid (we did not get a
         /// DSM-confirmed expiry code), but the NAS is unreachable —
@@ -80,7 +79,17 @@ final class SessionStore: ObservableObject {
     private var pathMonitor: NWPathMonitor?
     private let monitorQueue = DispatchQueue(label: "com.wenzlik.DropStation.network-monitor")
 
-    let client = SynologyAPIClient()
+    let client: SynologyAPIClient
+
+    init(client: SynologyAPIClient = SynologyAPIClient()) {
+        self.client = client
+    }
+
+    @Published private(set) var isVerifyingOTP = false
+    @Published private(set) var otpError: String?
+    @Published private(set) var isWebRecovery = false
+    private var pendingWebSession: (auth: AuthSession, cookies: [HTTPCookie])?
+    var canRetryWebValidation: Bool { pendingWebSession != nil }
 
     /// Credentials captured during the first login attempt, kept in memory only for the
     /// duration of a 2FA challenge so submitOTP can re-issue the request without
@@ -157,14 +166,14 @@ final class SessionStore: ObservableObject {
     /// `.connectionLost` so the user sees "session is saved, we'll
     /// reconnect" instead of a fresh login form.
     private func probeStoredSession() async {
-        guard !config.host.isEmpty, !config.account.isEmpty,
+        guard !config.host.isEmpty,
               let url = config.baseURL else {
             state = .loggedOut
             return
         }
         await client.configure(baseURL: url)
 
-        guard let savedSID = KeychainStorage.sid(for: accountAtHost) else {
+        guard let savedSession = KeychainStorage.authSession(for: accountAtHost) else {
             state = .loggedOut
             return
         }
@@ -173,7 +182,7 @@ final class SessionStore: ObservableObject {
         // Some DSM endpoints (the DS2 entry.cgi flow) honour the cookie
         // in addition to the `_sid` URL parameter.
         restoreCookiesFromKeychain()
-        await client.restoreSession(sid: savedSID)
+        await client.restoreSession(savedSession)
         do {
             _ = try await client.listTasks()
             touchSessionMetadata()
@@ -252,6 +261,7 @@ final class SessionStore: ObservableObject {
     /// every path that needs to invalidate a session: a rejected SID
     /// probe, an unauthorized list refresh, a logout. Idempotent.
     private func clearStoredSession() async {
+        pendingWebSession = nil
         clearStoredKeychainSession()
         await client.clearSession()
         await client.clearAuthCookies()
@@ -271,6 +281,8 @@ final class SessionStore: ObservableObject {
     /// Initial login from the form. If the server demands a second factor,
     /// transition to `.twoFactorRequired` and wait for the user to type a code.
     func login(config: ServerConfig, password: String) async {
+        isWebRecovery = false
+        otpError = nil
         self.config = config
         guard let url = config.baseURL else {
             state = .error(String(localized: "Invalid server URL."))
@@ -295,11 +307,14 @@ final class SessionStore: ObservableObject {
 
     /// Submit an OTP code from the 2FA challenge view.
     func submitOTP(_ otpCode: String) async {
+        guard !isVerifyingOTP, otpCode.count == 6, otpCode.allSatisfy({ "0123456789".contains($0) }) else { return }
         guard let pending = pendingCredentials else {
             state = .error(String(localized: "Session lost. Please sign in again."))
             return
         }
-        state = .authenticating
+        isVerifyingOTP = true
+        otpError = nil
+        defer { isVerifyingOTP = false }
         await attemptLogin(
             password: pending.password,
             otpCode: otpCode,
@@ -311,6 +326,8 @@ final class SessionStore: ObservableObject {
 
     /// Bail out of the 2FA challenge — go back to the credentials form.
     func cancelTwoFactor() {
+        guard !isVerifyingOTP else { return }
+        otpError = nil
         pendingCredentials = nil
         state = .loggedOut
     }
@@ -333,14 +350,20 @@ final class SessionStore: ObservableObject {
         } catch let error as APIError where error.isOTPRequired {
             onOTPNeeded()
         } catch let error as APIError where error.isOTPInvalid {
-            state = .error(String(localized: "Incorrect verification code."))
+            otpError = String(localized: "Incorrect verification code. Try a new code.")
+            state = .twoFactorRequired
         } catch let error as APIError where error.serverTrustInfo != nil {
             // First login to a self-signed NAS. Keep pendingCredentials
             // intact — trustCertificate() re-runs the login once the
             // user pins the cert.
             routeToCertificateTrust(error)
         } catch {
-            state = .error(error.localizedDescription)
+            if otpCode != nil {
+                otpError = error.localizedDescription
+                state = .twoFactorRequired
+            } else {
+                state = .error(error.localizedDescription)
+            }
         }
     }
 
@@ -354,7 +377,7 @@ final class SessionStore: ObservableObject {
             password: password,
             otpCode: otpCode
         )
-        persistSessionIfAllowed(sid: result.sid, cookies: [])
+        persistSessionIfAllowed(auth: result, cookies: [])
         state = .loggedIn
     }
 
@@ -372,13 +395,11 @@ final class SessionStore: ObservableObject {
         try? KeychainStorage.setPassword(password, for: config.account)
     }
 
-    private func persistSessionIfAllowed(sid: String, cookies: [HTTPCookie]) {
+    private func persistSessionIfAllowed(auth: AuthSession, cookies: [HTTPCookie]) {
         guard RememberSessionSettings.enabled else { return }
-        try? KeychainStorage.setSID(sid, for: accountAtHost)
-        if !cookies.isEmpty {
-            let stored = cookies.map(StoredCookie.init(cookie:))
-            try? KeychainStorage.setCookies(stored, for: accountAtHost)
-        }
+        try? KeychainStorage.setAuthSession(auth, for: accountAtHost)
+        let stored = cookies.map(StoredCookie.init(cookie:))
+        try? KeychainStorage.setCookies(stored, for: accountAtHost)
         try? KeychainStorage.setSessionMetadata(makeMetadata(), for: accountAtHost)
     }
 
@@ -390,7 +411,7 @@ final class SessionStore: ObservableObject {
         SessionMetadata(
             baseURL: config.baseURL?.absoluteString ?? "",
             account: config.account,
-            sessionName: SessionMetadata.downloadStationSession,
+            sessionName: config.account.isEmpty ? "DSM web" : SessionMetadata.downloadStationSession,
             createdAt: now,
             lastValidatedAt: now
         )
@@ -423,6 +444,9 @@ final class SessionStore: ObservableObject {
     ///     the default store may still have something from a prior
     ///     in-app browser run — wipe it for good measure)
     func logout() async {
+        pendingCredentials = nil
+        otpError = nil
+        isWebRecovery = false
         try? await client.logout()
         await clearStoredSession()
         KeychainStorage.deletePassword(for: config.account)
@@ -451,94 +475,51 @@ final class SessionStore: ObservableObject {
         await store.removeData(ofTypes: types, modifiedSince: .distantPast)
     }
 
-    /// Finish a Secure SignIn web login.
-    ///
-    /// What the WKWebView round-trip actually buys us: a *web identity*
-    /// — DSM's cookies (`id`, `did`, `stay_login`) say "this user is
-    /// signed in to DSM web". That is **not** the same thing as having
-    /// API access to Download Station. Synology binds API permissions
-    /// to a `session=...` parameter passed to `auth.cgi` at login time,
-    /// and the web flow's session name is the DSM-wide one, which
-    /// `SYNO.DownloadStation.*` endpoints reject with error 105.
-    ///
-    /// Earlier we tried to "upgrade" the cookie session by re-calling
-    /// `auth.cgi&method=login&session=DownloadStation` without
-    /// credentials — DSM treats that as a brand-new login attempt and
-    /// returns 400 "No such account". So instead we treat web identity
-    /// and API identity as separate concerns:
-    ///
-    ///   1. Install the harvested cookies into the shared jar.
-    ///   2. Use the `id` cookie value as a candidate SID.
-    ///   3. Run a real Download Station probe (`validateDownloadStationAccess`).
-    ///   4. Probe succeeds → persist + transition to `.loggedIn`.
-    ///   5. Probe returns 105 → `.sessionUnauthorized` with a recovery
-    ///      card directing the user to OTP (or retry).
-    ///   6. Probe fails transiently → `.error(...)`, user retries from
-    ///      the login form.
-    ///
-    /// We never call `.loggedIn` before step 4 succeeds, so the task
-    /// list never appears with a broken session behind it.
-    func completeWebSignIn(
-        config: ServerConfig,
-        sid: String,
-        cookies: [HTTPCookie]
-    ) async {
+    /// A cookie SID is only a candidate. Preserve its CSRF context and require
+    /// a real Download Station request before committing the session.
+    /// 105 means permission denied, not proof of a session-name mismatch.
+    func completeWebSignIn(config: ServerConfig, auth: AuthSession, cookies: [HTTPCookie]) async {
+        await clearStoredSession()
+        KeychainStorage.deletePassword(for: self.config.account)
         self.config = config
+        // Web login does not prove the username entered in the native form.
+        // An anonymous web-session slot also prevents password auto-login as
+        // a different user after expiry. Settings displays the NAS instead.
+        self.config.account = ""
+        pendingCredentials = nil
+        isWebRecovery = true
         guard let url = config.baseURL else {
             state = .error(String(localized: "Invalid server URL."))
             return
         }
-        DSLog.session("completeWebSignIn host=\(config.host) initialSid=\(redact(sid)) cookies=\(cookies.count)")
-        for c in cookies {
-            DSLog.session("  cookie name=\(c.name) domain=\(c.domain) path=\(c.path) secure=\(c.isSecure)")
-        }
-
         await client.configure(baseURL: url)
-        // Push the WKWebView's cookies into the shared jar so URLSession
-        // requests can send them automatically.
-        let storage = HTTPCookieStorage.shared
-        for cookie in cookies {
-            storage.setCookie(cookie)
-        }
-        await client.restoreSession(sid: sid)
+        pendingWebSession = (auth, cookies)
+        await retryWebValidation()
+    }
 
-        // Show the user we're working before the probe completes —
-        // otherwise the WKWebView sheet just dismisses and they're
-        // looking at the login form for a beat with no feedback.
+    func retryWebValidation() async {
+        guard let candidate = pendingWebSession, state != .validatingApiAccess else { return }
         state = .validatingApiAccess
-
-        // Diagnostic: dump available APIs once per web sign-in. Behind
-        // DEBUG only via DSLog. Doesn't gate the probe.
-        if let info = try? await client.apiInfo() {
-            for (api, entry) in info {
-                DSLog.auth("apiInfo \(api) path=\(entry.path) versions=\(entry.minVersion)..\(entry.maxVersion)")
-            }
-        } else {
-            DSLog.auth("apiInfo unavailable")
-        }
-
+        await client.clearAuthCookies()
+        for cookie in candidate.cookies { HTTPCookieStorage.shared.setCookie(cookie) }
+        await client.restoreSession(candidate.auth)
         do {
             try await validateDownloadStationAccess()
-        } catch let error as APIError where error.isUnauthorized {
-            DSLog.session("DS probe → 105; web identity verified but no API permission")
-            pendingCredentials = nil
-            state = .sessionUnauthorized(
-                reason: String(localized: "Secure SignIn login succeeded, but DSM did not grant API access to Download Station.")
-            )
-            return
+            ServerConfigStore.save(config)
+            persistSessionIfAllowed(auth: candidate.auth, cookies: candidate.cookies)
+            pendingWebSession = nil
+            isWebRecovery = false
+            state = .loggedIn
+        } catch let error as APIError where error.isSessionExpired {
+            await clearStoredSession()
+            state = .sessionUnauthorized(reason: String(localized: "DSM rejected Download Station access. Check this account’s application permissions in DSM, or sign in with a verification code. Web sign-in compatibility varies by NAS."))
+        } catch let error as APIError where error.serverTrustInfo != nil {
+            routeToCertificateTrust(error)
         } catch {
-            DSLog.session("DS probe failed: \(error.localizedDescription)")
-            pendingCredentials = nil
-            state = .error(String(localized: "Couldn't reach Download Station: \(error.localizedDescription)"))
-            return
+            // Keep the candidate only in memory. Retry does not repeat push/2FA,
+            // and never saves an unvalidated session to the Keychain.
+            state = .sessionUnauthorized(reason: String(localized: "Download Station access could not be checked. Your web session is kept for this attempt. Check the connection and retry."))
         }
-
-        // Probe passed — now (and only now) we're fully authenticated.
-        ServerConfigStore.save(config)
-        persistSessionIfAllowed(sid: sid, cookies: cookies)
-        pendingCredentials = nil
-        state = .loggedIn
-        DSLog.session("completeWebSignIn → loggedIn (sid=\(redact(sid)))")
     }
 
     /// Run a real Download Station request and require success=true.
@@ -614,7 +595,9 @@ final class SessionStore: ObservableObject {
         CertPinStore.pin(fingerprint, for: host)
         DSLog.session("trustCertificate: pinned \(fingerprint) for \(host)")
         state = .restoring
-        if let pending = pendingCredentials {
+        if pendingWebSession != nil {
+            await retryWebValidation()
+        } else if let pending = pendingCredentials {
             await attemptLogin(
                 password: pending.password,
                 otpCode: nil,
@@ -632,6 +615,7 @@ final class SessionStore: ObservableObject {
     func declineCertificate() {
         DSLog.session("declineCertificate: returning to login form")
         pendingCredentials = nil
+        pendingWebSession = nil
         state = .loggedOut
     }
 
@@ -770,13 +754,10 @@ final class SessionStore: ObservableObject {
     private func restoreCookiesFromKeychain() {
         guard let stored = KeychainStorage.cookies(for: accountAtHost),
               !stored.isEmpty else { return }
-        let now = Date()
-        let storage = HTTPCookieStorage.shared
-        for cookie in stored {
-            if let expires = cookie.expiresDate, expires < now { continue }
-            if let http = cookie.makeHTTPCookie() {
-                storage.setCookie(http)
-            }
+        guard let apiURL = config.baseURL?.appendingPathComponent("webapi/entry.cgi") else { return }
+        let cookies = stored.compactMap { $0.makeHTTPCookie() }
+        for cookie in WebSessionBridge.applicableCookies(cookies, to: apiURL) {
+            HTTPCookieStorage.shared.setCookie(cookie)
         }
     }
 
@@ -804,7 +785,9 @@ final class SessionStore: ObservableObject {
 
     // MARK: - Helpers
 
-    private var accountAtHost: String { "\(config.account)@\(config.host)" }
+    private var accountAtHost: String {
+        config.account.isEmpty ? "web@\(config.baseURL?.absoluteString ?? config.host)" : "\(config.account)@\(config.host)"
+    }
 }
 
 /// A `.torrent` file handed to the app from outside (Files / Safari /

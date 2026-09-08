@@ -87,6 +87,14 @@ final class ServerTrustCoordinator: NSObject, URLSessionDelegate, @unchecked Sen
         didReceive challenge: URLAuthenticationChallenge,
         completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void
     ) {
+        handle(challenge, completionHandler: completionHandler)
+    }
+
+    /// Shared by URLSession and the DSM web sheet so trust decisions agree.
+    func handle(
+        _ challenge: URLAuthenticationChallenge,
+        completionHandler: (URLSession.AuthChallengeDisposition, URLCredential?) -> Void
+    ) {
         guard challenge.protectionSpace.authenticationMethod == NSURLAuthenticationMethodServerTrust,
               let serverTrust = challenge.protectionSpace.serverTrust else {
             // Not a server-trust challenge (client cert, basic auth,

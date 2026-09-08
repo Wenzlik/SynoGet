@@ -10,9 +10,9 @@ import Foundation
 /// the NAS in the last few minutes the SID is almost certainly still
 /// good and we skip the network round trip.
 ///
-/// `sessionName` is always "DownloadStation" today (the only API surface
-/// we sign into), but we record it explicitly so future multi-API work
-/// can disambiguate which scope a stored SID is good for.
+/// `sessionName` records the login source ("DownloadStation" for native
+/// login, "DSM web" for the web bridge). Only a successful API probe proves
+/// which endpoints a web session can access.
 struct SessionMetadata: Codable, Equatable {
     let baseURL: String
     let account: String
