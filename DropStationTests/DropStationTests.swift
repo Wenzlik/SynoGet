@@ -153,10 +153,10 @@ final class TaskFilterTests: XCTestCase {
     }
 
     func testDisplayStatusLabelFoldsPausedAtCompletionToEnded() {
-        XCTAssertEqual(task(.downloading).displayStatusLabel, "Downloading")
-        XCTAssertEqual(task(.paused).displayStatusLabel, "Paused")    // partial
-        XCTAssertEqual(taskAtCompletion(.paused).displayStatusLabel, "Ended")
-        XCTAssertEqual(task(.finished).displayStatusLabel, "Ended")
+        XCTAssertEqual(task(.downloading).displayStatusLabel, String(localized: "Downloading"))
+        XCTAssertEqual(task(.paused).displayStatusLabel, String(localized: "Paused"))    // partial
+        XCTAssertEqual(taskAtCompletion(.paused).displayStatusLabel, String(localized: "Ended"))
+        XCTAssertEqual(task(.finished).displayStatusLabel, String(localized: "Ended"))
     }
 }
 
@@ -774,21 +774,20 @@ final class APIErrorContextTests: XCTestCase {
     func testCommonCodesAreContextIndependent() {
         XCTAssertEqual(SynologyErrorCode.message(for: 106, context: .auth),
                        SynologyErrorCode.message(for: 106, context: .task))
-        XCTAssertTrue(SynologyErrorCode.message(for: 106).contains("timeout"))
+        XCTAssertEqual(SynologyErrorCode.message(for: 106), String(localized: "Session timeout."))
     }
 
     func testAuthAndTaskContextsDisagreeOn400() {
         let auth = SynologyErrorCode.message(for: 400, context: .auth)
         let task = SynologyErrorCode.message(for: 400, context: .task)
         XCTAssertNotEqual(auth, task)
-        XCTAssertTrue(auth.lowercased().contains("password") || auth.lowercased().contains("account"))
-        XCTAssertTrue(task.lowercased().contains("file"))
+        XCTAssertEqual(auth, String(localized: "No such account or incorrect password."))
+        XCTAssertEqual(task, String(localized: "File upload failed."))
     }
 
     func testTaskContext401IsMaxTasks() {
-        XCTAssertTrue(
-            SynologyErrorCode.message(for: 401, context: .task).lowercased().contains("maximum")
-        )
+        XCTAssertEqual(SynologyErrorCode.message(for: 401, context: .task),
+                       String(localized: "Maximum number of tasks reached."))
     }
 }
 
