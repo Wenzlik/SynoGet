@@ -108,11 +108,11 @@ Not:
 
 ## High priority
 
-- **Web login / 2FA hardening (next patch):** preserve the complete DSM
-  session including CSRF token, validate Download Station access, and keep
-  recovery actionable. Remain opt-in experimental until real-NAS tests
-  establish compatibility. Polish login, OTP retry, and web-sheet feedback.
-  See [investigation and acceptance checklist](../next-steps/web-login-2fa.md).
+- **Web login real-NAS validation:** client/session hardening and login
+  polish are in [CHANGELOG Unreleased](../../CHANGELOG.md). Web sign-in
+  remains explicitly experimental, off by default, and testable through
+  login Settings. Complete the [NAS compatibility matrix](../next-steps/web-login-2fa.md)
+  before promoting it to a supported beta.
 
 - Run the TestFlight smoke checklist on the 0.5.3 build and
   record any failure as a docs-first follow-up.

@@ -67,12 +67,16 @@ icon.svg + icon-tinted.svg  App icon sources (rendered to PNG with rsvg-convert)
   because DSM is inconsistent about returning numbers as JSON numbers
   vs quoted-string numbers vs floats. Same field can come back as
   `5368709120`, `"5368709120"`, or even `5.36e9` across DSM builds.
-- **2FA push approval (Synology Secure SignIn) is intentionally not
-  supported.** The public `auth.cgi` endpoint can't trigger the push;
-  only Synology's first-party apps and the OAuth Service can. Users
-  with Secure SignIn enabled read the rotating 6-digit code from the
-  app's "Codes" tab and enter it as TOTP. This is documented in
-  `SessionStore.State.twoFactorRequired` and on the login API.
+- **Native login uses TOTP; experimental web login uses DSM's own 2FA.**
+  The public credential login does not drive push approval. The opt-in
+  WKWebView sheet queries the documented `SYNO.API.Auth.token` method,
+  bridges SID + CSRF context, then validates Download Station access.
+  Error 105 means permission denied, not proof of a session-scope mismatch.
+  Real-NAS compatibility remains a release gate; see
+  `docs/next-steps/web-login-2fa.md`.
+- **Keychain labels are not unique keys.** Credential kinds use separate
+  service namespaces. Keep legacy reads and cleanup when changing storage;
+  SID + token must remain paired in one `AuthSession` record.
 - **Launch-time session restore** is driven by `.task` on
   `DropStationApp`'s `WindowGroup`, not from `SessionStore.init()`. The
   `restoreOnLaunch()` entry point is idempotent via a

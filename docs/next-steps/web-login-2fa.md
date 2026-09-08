@@ -23,7 +23,46 @@ Package/account permissions or DSM-specific web/API restrictions remain
 possible. The earlier credential-free `method=login` attempt returned 400
 (commit `0c0a2a2`); do not repeat it as a supposed session upgrade.
 
-## Acceptance
+## Implemented in Unreleased
+
+- Query the documented `SYNO.API.Auth.token` endpoint in the web page's
+  cookie context (guide pp. 17–18), with same-origin checks before and
+  after asynchronous work and redirects disabled. No private login replay.
+- Preserve SID + optional token as one `AuthSession` through native login,
+  API forms, DS2 multipart upload, Keychain restore and cleanup.
+- Fix a second, independently reproduced persistence defect: generic
+  Keychain passwords are unique by service/account, not label. SID,
+  cookies and metadata previously collided (`errSecDuplicateItem`, -25299).
+  Services now include credential kind, with legacy reads and cleanup.
+- Use an origin-specific web session slot without assuming the native
+  username. Clear the prior native password on completed web handoff.
+- Require an explicit completion check instead of guessing from navigation.
+  Keep failed-check feedback in the sheet, with reload, cancel and the
+  existing certificate pinning policy. No automatic trust of unknown certs.
+- Require a real Download Station probe. Rejected candidates are cleared;
+  failed checks keep the candidate only in memory for retry. OTP fallback
+  and a fresh web login remain available.
+- Keep OTP fields visible while verifying and after an incorrect code;
+  expose experimental web sign-in in login Settings, default off. New
+  text is translated into Czech.
+
+## Validation
+
+- iPhone 17 Pro / iOS 26.5: 85 unit tests pass in English and Czech.
+- Coverage includes cookie origin/path/expiry/transport and ambiguity,
+  token parsing, legacy Keychain migration and coexisting records, request
+  encoding including multipart, 105 cleanup, offline retry, cold restore
+  without a native username, and wrong-code/transport OTP retry.
+- Four pre-existing assertions assumed English output. They now compare
+  localized expected labels/messages so the normal Czech simulator run
+  can pass without changing device language.
+- Full visual walkthrough (Czech, Dynamic Type, dark/light, web sheet and
+  OTP/recovery states) remains manual follow-up. Simulator UI automation did
+  not respond to in-device input during this run.
+- This validates client behavior with synthetic sessions, **not** a real
+  DSM push approval, web-page compatibility, or package permissions.
+
+## Acceptance checklist
 
 - Carry SID and optional CSRF token together through API requests, Keychain
   restore, and cleanup, including multipart uploads. Never log their values.

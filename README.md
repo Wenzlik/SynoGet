@@ -3,7 +3,7 @@
 A modern iPhone client for **Synology Download Station** — the replacement for
 the discontinued **DS get** app.
 
-> Current version: **0.5.3** — see [CHANGELOG.md](CHANGELOG.md) for what's
+> Current version: **0.5.5** — see [CHANGELOG.md](CHANGELOG.md) for what's
 > shipping and [ROADMAP.md](ROADMAP.md) for what's planned.
 > Picking up the repo as a contributor (or AI assistant)? Start with
 > [AGENTS.md](AGENTS.md).
@@ -40,49 +40,52 @@ material-and-hairline secondary cards everywhere else, status
 conveyed by small filled dots rather than tinted backgrounds.
 Premium native utility feel; no decorative chrome.
 
-The app stays signed in across launches — the Download Station SID
-and Secure SignIn cookies live in the iOS Keychain so a cold start
-goes straight to the task list, with no OTP prompt until DSM
-actually expires the session. Passwords are **not** persisted. You
-can opt out of session persistence in Settings → Privacy via the
-**Remember session** toggle (defaults on; flipping it off clears
-the saved SID, cookies, and session metadata and forces a fresh
-sign-in on every cold start). The app recovers silently from Wi-Fi ↔
-cellular switches and runs on iOS 26 or newer.
+The app stays signed in across launches. The SID, optional CSRF token,
+web cookies, and session metadata live in the iOS Keychain. **Remember
+session** in Settings → Privacy defaults on; turning it off clears the
+persisted session while keeping the current app session active. **Remember
+password** is a separate preference (also on by default): native login can
+reuse the saved password after session expiry and ask only for an OTP.
+Web login does not capture or save the password entered in DSM.
 
 ## Sign-in methods
 
-DropStation supports one user-facing sign-in flow today:
+- **Verification code (TOTP)** — The default supported path. Enter your
+  username and password; if DSM requires 2FA, enter the rotating 6-digit
+  code from your authenticator (including Secure SignIn's Codes tab).
+  Incorrect codes can be retried on the same screen.
+- **Web sign-in (experimental, off by default)** — From the login screen,
+  open Settings and enable **Experimental web sign-in**, then choose
+  **Web sign-in**. Complete DSM's own login and push approval / web 2FA,
+  then tap **Check Download Station access**. Reload and certificate
+  feedback are available in the sheet. Cancel returns to native login.
 
-- **Verification code (TOTP)** — Type your username and password
-  into the app; when DSM challenges for a second factor, enter the
-  6-digit code from a TOTP app (Synology Secure SignIn Codes tab,
-  Google Authenticator, 1Password, …). Uses `SYNO.API.Auth` over
-  `auth.cgi`. This is the only path the app exposes by default and
-  the only one that reliably gets a Download Station-scoped session.
+The experimental bridge queries the documented `SYNO.API.Auth.token`
+method inside WKWebView, keeps the CSRF token with the cookie SID, and
+requires a successful Download Station API probe before signing in.
+A network failure preserves the candidate in memory for **Retry access
+check**; a rejected session is cleared and offers verification-code
+fallback or a fresh web login. Only validated sessions are persisted.
+The existing `auth.method.experimental` defaults flag still works, but
+no command-line setup is needed to test the flow.
 
-> **Experimental / hidden:** DropStation also contains a WKWebView
-> Secure SignIn flow (the DSM web login with "Approve sign-in" push
-> notification). It's gated behind the `auth.method.experimental`
-> UserDefaults flag because DSM's web session frequently fails to
-> extend auth to the Download Station API (Synology error 105),
-> which leaves the user staring at a recovery card. The code stays
-> in the binary for development — `defaults write
-> com.wenzlik.DropStation auth.method.experimental -bool YES` to
-> bring the picker back. Don't expose this to end users until the
-> session handoff is solved.
+**Real-NAS compatibility is not yet established.** Error 105 means
+permission denied; it does not prove a DSM-web vs. DownloadStation
+session-name mismatch. Dropping CSRF context was a client defect, but
+account/package permissions and DSM-specific restrictions can still
+prevent access. Do not disable NAS security to make the experiment work.
+See the [investigation and NAS test matrix](docs/next-steps/web-login-2fa.md).
 
-After the first successful sign-in, the session is restored
-automatically on every relaunch — the SID is kept in the iOS
-Keychain. The saved SID survives Wi-Fi ↔ cellular switches,
-offline windows, and other transport-layer hiccups; it is only
-discarded when DSM explicitly tells us the session has expired
-(Synology error codes 105/106/107/119). When the NAS is
-unreachable, the app shows a "Connection lost / session is saved"
-card and auto-reconnects via `NWPathMonitor` the moment the
-network comes back. "Sign out" clears the SID, cookies, session
-metadata, any legacy password an older build may have left
-behind, and the WKWebsiteDataStore.
+Web sessions use a separate, origin-specific Keychain slot without claiming
+the username typed into the native form. Settings shows a neutral identity;
+web-session expiry never silently signs in with another user's saved
+password. The next fresh native login asks for the username again.
+
+After a successful sign-in, relaunch reuses the saved session. Network
+failures preserve it and show the connection recovery screen; confirmed
+session rejection (105/106/107/119) clears it. **Sign out** and **Forget
+this device** both clear the current saved session, cookies, metadata,
+and saved password, including legacy Keychain records.
 
 ## Installing
 
@@ -120,11 +123,9 @@ release once a TestFlight pipeline is set up (tracked in
   ticks only while the app is in the foreground.
 - **Single NAS only.** Multi-server switching is on the 0.5 roadmap.
 - **iOS 26 required.** The app leans heavily on iOS 26 Liquid Glass.
-- **Secure SignIn web flow is hidden.** The WKWebView Secure SignIn
-  path is disabled in the default build (see Sign-in methods above)
-  because DSM frequently refuses to extend the web session to the
-  Download Station API. Verification code is the only user-facing
-  flow until we have a more robust session handoff.
+- **Web sign-in remains experimental.** Enable it explicitly in login
+  Settings for testing. Push/web 2FA and API handoff still require the
+  real-NAS compatibility checks linked above.
 
 ## Stack
 

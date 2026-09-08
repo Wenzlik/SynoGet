@@ -6,7 +6,11 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-_No changes since 0.5.5._
+### Improved
+- Experimental web sign-in is available in login Settings, with clearer progress, retry, and verification-code fallback.
+- Web sessions now retain the information needed for protected NAS requests and session restore.
+- Incorrect verification codes can be retried without leaving the code screen.
+- Fixed saved-session storage conflicts and improved Czech sign-in labels.
 
 ## [0.5.5] — 2026-07-01 — iOS 26 redesign
 
