@@ -1,7 +1,7 @@
 import Foundation
 import Security
 
-/// Minimal Keychain wrapper. Stores five classes of items keyed under one service:
+/// Minimal Keychain wrapper. Stores credential types in separate service namespaces:
 ///   - Password    (account = NAS username)
 ///   - SID         (account = "<username>@<host>")
 ///   - Cookies     (account = "<username>@<host>", JSON-encoded [StoredCookie])
@@ -9,14 +9,14 @@ import Security
 ///   - CertPin     (account = "<host>", SHA-256 fingerprint of a user-trusted
 ///                  self-signed certificate — keyed by host, not account, since
 ///                  a cert belongs to the server)
-/// Items are tagged by Keychain "label" so the same NAS username can have
-/// distinct entries without colliding.
+/// Labels are retained for reading legacy records; they are not unique keys.
 enum KeychainStorage {
     private static let service = "com.wenzlik.DropStation"
 
     enum Kind: String {
         case password = "password"
         case sid = "sid"
+        case authSession = "authSession"
         case cookies = "cookies"
         case sessionMeta = "sessionMeta"
         case certPin = "certPin"
@@ -47,7 +47,23 @@ enum KeychainStorage {
     }
 
     static func deleteSID(for accountAtHost: String) {
+        remove(kind: .authSession, account: accountAtHost)
         remove(kind: .sid, account: accountAtHost)
+    }
+
+    /// One Keychain record keeps the token paired with its SID. Legacy SID-only
+    /// installs remain readable; replacement removes the legacy copy.
+    static func setAuthSession(_ session: AuthSession, for key: String) throws {
+        let data = try JSONEncoder().encode(session)
+        try store(value: String(decoding: data, as: UTF8.self), kind: .authSession, account: key)
+        remove(kind: .sid, account: key)
+    }
+
+    static func authSession(for key: String) -> AuthSession? {
+        if let json = load(kind: .authSession, account: key) {
+            return try? JSONDecoder().decode(AuthSession.self, from: Data(json.utf8))
+        }
+        return sid(for: key).map { AuthSession(sid: $0) }
     }
 
     // MARK: - Cookies
@@ -135,45 +151,52 @@ enum KeychainStorage {
 
     // MARK: - Common
 
-    private static func store(value: String, kind: Kind, account: String) throws {
-        let data = Data(value.utf8)
-        let query: [String: Any] = [
+    /// Generic-password uniqueness is service + account, NOT label. Older
+    /// builds silently collided when writing SID, cookies and metadata for
+    /// the same account. Namespace the service; read legacy records by label.
+    private static func query(kind: Kind, account: String, legacy: Bool = false) -> [String: Any] {
+        [
             kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
+            kSecAttrService as String: legacy ? service : "\(service).\(kind.rawValue)",
             kSecAttrAccount as String: account,
             kSecAttrLabel as String: kind.rawValue
         ]
-        SecItemDelete(query as CFDictionary)
+    }
 
-        var attrs = query
-        attrs[kSecValueData as String] = data
-        let status = SecItemAdd(attrs as CFDictionary, nil)
-        guard status == errSecSuccess else { throw KeychainError.status(status) }
+    private static func store(value: String, kind: Kind, account: String) throws {
+        let identity = query(kind: kind, account: account)
+        let valueAttributes = [kSecValueData as String: Data(value.utf8)]
+        let updateStatus = SecItemUpdate(identity as CFDictionary, valueAttributes as CFDictionary)
+        if updateStatus == errSecItemNotFound {
+            var attributes = identity
+            attributes[kSecValueData as String] = Data(value.utf8)
+            let status = SecItemAdd(attributes as CFDictionary, nil)
+            guard status == errSecSuccess else { throw KeychainError.status(status) }
+        } else if updateStatus != errSecSuccess {
+            throw KeychainError.status(updateStatus)
+        }
+        // Only remove the old value after the new value has been stored.
+        SecItemDelete(query(kind: kind, account: account, legacy: true) as CFDictionary)
     }
 
     private static func load(kind: Kind, account: String) -> String? {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: account,
-            kSecAttrLabel as String: kind.rawValue,
-            kSecReturnData as String: true,
-            kSecMatchLimit as String: kSecMatchLimitOne
-        ]
-        var result: AnyObject?
-        guard SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess,
-              let data = result as? Data else { return nil }
-        return String(data: data, encoding: .utf8)
+        for legacy in [false, true] {
+            var lookup = query(kind: kind, account: account, legacy: legacy)
+            lookup[kSecReturnData as String] = true
+            lookup[kSecMatchLimit as String] = kSecMatchLimitOne
+            var result: AnyObject?
+            if SecItemCopyMatching(lookup as CFDictionary, &result) == errSecSuccess,
+               let data = result as? Data {
+                return String(data: data, encoding: .utf8)
+            }
+        }
+        return nil
     }
 
     private static func remove(kind: Kind, account: String) {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: account,
-            kSecAttrLabel as String: kind.rawValue
-        ]
-        SecItemDelete(query as CFDictionary)
+        for legacy in [false, true] {
+            SecItemDelete(query(kind: kind, account: account, legacy: legacy) as CFDictionary)
+        }
     }
 
     enum KeychainError: Error {

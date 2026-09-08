@@ -13,7 +13,8 @@ actor SynologyAPIClient {
     /// request fails so we can surface `APIError.serverTrust`.
     private let trustCoordinator: ServerTrustCoordinator
     private var baseURL: URL?
-    private var sid: String?
+    private var authSession: AuthSession?
+    private var sid: String? { authSession?.sid }
 
     init() {
         let coordinator = ServerTrustCoordinator()
@@ -50,17 +51,22 @@ actor SynologyAPIClient {
     var isLoggedIn: Bool { sid != nil }
 
     func configure(baseURL: URL) {
+        if self.baseURL != baseURL { authSession = nil }
         self.baseURL = baseURL
     }
 
     /// Restore a previously-acquired SID without going through `login`.
     /// Caller is responsible for verifying the session is still valid (e.g. by calling `listTasks`).
     func restoreSession(sid: String) {
-        self.sid = sid
+        self.authSession = AuthSession(sid: sid)
+    }
+
+    func restoreSession(_ authSession: AuthSession) {
+        self.authSession = authSession
     }
 
     func clearSession() {
-        self.sid = nil
+        self.authSession = nil
     }
 
     /// Drop every cookie DSM has set for our base URL. The relevant one is
@@ -92,10 +98,7 @@ actor SynologyAPIClient {
 
     // MARK: - Auth
 
-    struct LoginResult {
-        /// The new session id.
-        let sid: String
-    }
+    typealias LoginResult = AuthSession
 
     /// SYNO.API.Auth login (DownloadStation session, API version 6).
     /// Credentials are sent as POST form data so they do not end up in server access logs.
@@ -140,18 +143,20 @@ actor SynologyAPIClient {
             "account": account,
             "passwd": password,
             "session": "DownloadStation",
-            "format": "sid"
+            "format": "sid",
+            "enable_syno_token": "yes"
         ]
         if let otpCode { params["otp_code"] = otpCode }
 
         let url = baseURL.appendingPathComponent("/webapi/auth.cgi")
         let response: APIResponse<LoginData> = try await postForm(url: url, params: params)
         try ensureSuccess(response)
-        guard let data = response.data else {
+        guard let data = response.data, !data.sid.isEmpty else {
             throw APIError.synology(code: -1, message: "Login succeeded but no session id returned.")
         }
-        self.sid = data.sid
-        return LoginResult(sid: data.sid)
+        let auth = AuthSession(sid: data.sid, synoToken: data.synotoken)
+        self.authSession = auth
+        return auth
     }
 
     func logout() async throws {
@@ -159,13 +164,12 @@ actor SynologyAPIClient {
         let url = baseURL.appendingPathComponent("/webapi/auth.cgi")
         let params: [String: String] = [
             "api": "SYNO.API.Auth",
-            "version": "1",
+            "version": "6",
             "method": "logout",
-            "session": "DownloadStation",
             "_sid": sid
         ]
         _ = try? await postForm(url: url, params: params) as APIResponse<EmptyData>
-        self.sid = nil
+        self.authSession = nil
     }
 
     // MARK: - Tasks
@@ -247,7 +251,7 @@ actor SynologyAPIClient {
         //   type         — "file" for an uploaded .torrent / .nzb, "url" for a URI
         //   destination  — path string; empty string means "use the default folder"
         //   create_list  — whether to prompt for per-file selection after creation
-        let fields: [(String, String)] = [
+        var fields: [(String, String)] = [
             ("api", "SYNO.DownloadStation2.Task"),
             ("method", "create"),
             ("version", "2"),
@@ -258,6 +262,8 @@ actor SynologyAPIClient {
             ("size", String(fileData.count)),
             ("file", "[\"torrent\"]")
         ]
+
+        if let token = authSession?.synoToken { fields.append(("SynoToken", token)) }
 
         let boundary = "Boundary-\(UUID().uuidString)"
         var request = URLRequest(url: url)
@@ -579,7 +585,12 @@ actor SynologyAPIClient {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
-        request.httpBody = encodeForm(params).data(using: .utf8)
+        var authenticatedParams = params
+        // Login starts a new identity; never attach a previous session token.
+        if params["method"] != "login", let token = authSession?.synoToken {
+            authenticatedParams["SynoToken"] = token
+        }
+        request.httpBody = encodeForm(authenticatedParams).data(using: .utf8)
 
         do {
             let (data, response) = try await session.data(for: request)

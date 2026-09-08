@@ -12,6 +12,7 @@ struct APIResponse<T: Decodable>: Decodable {
 
 struct LoginData: Decodable {
     let sid: String
+    let synotoken: String?
     /// Device id Synology returns when `enable_device_token=yes` is passed on a
     /// 2FA login. We don't request it (the flag suppresses Secure SignIn push)
     /// but keep the field around so the decoder still accepts responses that
