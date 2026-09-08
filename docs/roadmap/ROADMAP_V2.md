@@ -108,6 +108,12 @@ Not:
 
 ## High priority
 
+- **Web login / 2FA hardening (next patch):** preserve the complete DSM
+  session including CSRF token, validate Download Station access, and keep
+  recovery actionable. Remain opt-in experimental until real-NAS tests
+  establish compatibility. Polish login, OTP retry, and web-sheet feedback.
+  See [investigation and acceptance checklist](../next-steps/web-login-2fa.md).
+
 - Run the TestFlight smoke checklist on the 0.5.3 build and
   record any failure as a docs-first follow-up.
 - Watch App Store Connect TestFlight crash / hang reports during
