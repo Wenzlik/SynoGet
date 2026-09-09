@@ -2377,6 +2377,186 @@
           }
         }
       }
+    },
+    "Sign in": {
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Přihlásit se"
+          }
+        }
+      }
+    },
+    "Password": {
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Heslo"
+          }
+        }
+      }
+    },
+    "Username": {
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uživatelské jméno"
+          }
+        }
+      }
+    },
+    "Verify code": {
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ověřit kód"
+          }
+        }
+      }
+    },
+    "Host or IP": {
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hostitel nebo IP"
+          }
+        }
+      }
+    },
+    "Port": {
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Port"
+          }
+        }
+      }
+    },
+    "6-digit code": {
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "6místný kód"
+          }
+        }
+      }
+    },
+    "Continue to web sign-in": {
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pokračovat na webové přihlášení"
+          }
+        }
+      }
+    },
+    "Re-authenticate with verification code": {
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Znovu se přihlásit ověřovacím kódem"
+          }
+        }
+      }
+    },
+    "Downloaded": {
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Staženo"
+          }
+        }
+      }
+    },
+    "Uploaded": {
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Odesláno"
+          }
+        }
+      }
+    },
+    "Ratio": {
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Poměr"
+          }
+        }
+      }
+    },
+    "Type": {
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Typ"
+          }
+        }
+      }
+    },
+    "Peers": {
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Protějšky"
+          }
+        }
+      }
+    },
+    "Seeders": {
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zdroje"
+          }
+        }
+      }
+    },
+    "Leechers": {
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stahující"
+          }
+        }
+      }
+    },
+    "Owner": {
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vlastník"
+          }
+        }
+      }
+    },
+    "Created": {
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vytvořeno"
+          }
+        }
+      }
     }
   },
   "version": "1.1"
