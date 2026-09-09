@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Synology-DSM-inspired login screen: centered card with a single column of fields
+/// DropStation login screen: centered card with a single column of fields
 /// (username, password, optional server config disclosure) and one big Sign in button.
 /// After the first attempt the same card switches to a 2FA challenge layout when the
 /// server demands a second factor.
@@ -104,40 +104,7 @@ struct LoginView: View {
 
     // MARK: - Header
 
-    // MARK: - Brand palette
-
-    /// Mono-blue pair for the brand mark gradient, ambient glow, and
-    /// card rim. Per the iOS 26 redesign the UI accent is a single
-    /// clean blue with no purple — the droplet keeps its shape and a
-    /// subtle light→deep blue gradient for identity, but the old
-    /// blue→purple glassmorphism is gone.
-    private var brandBlue: Color { Color(red: 0.29, green: 0.51, blue: 1.0) }
-    private var brandBlueLight: Color { Color(red: 0.40, green: 0.72, blue: 1.0) }
-
-    private var brandGradient: LinearGradient {
-        LinearGradient(
-            colors: [brandBlueLight, brandBlue],
-            startPoint: .topLeading, endPoint: .bottomTrailing
-        )
-    }
-
-    /// Calm system gradient as the base, with one soft, heavily-blurred
-    /// blue blob floating behind the card so the screen has a little
-    /// ambient light without the old twin blue+purple neon glow. Low
-    /// opacity keeps light mode airy; dark mode picks up the glow.
-    private var backgroundGradient: some View {
-        ZStack {
-            LinearGradient(
-                colors: [Color(.systemBackground), Color(.secondarySystemBackground)],
-                startPoint: .top, endPoint: .bottom
-            )
-            Circle()
-                .fill(brandBlue.opacity(0.22))
-                .frame(width: 360, height: 360)
-                .blur(radius: 140)
-                .offset(x: -130, y: -240)
-        }
-    }
+    private var backgroundGradient: some View { DSBackground() }
 
     private var header: some View {
         VStack(spacing: DSSpacing.md) {
@@ -147,31 +114,11 @@ struct LoginView: View {
         }
     }
 
-    /// Brand mark for the login screen — the same accent-tinted
-    /// Liquid Glass disc pattern the dashboard uses for activity
-    /// icons, scaled up to act as a screen-level brand element.
-    /// Replaces the previous orange linear gradient + heavy shadow
-    /// (the only orange-gradient surface in the app — visually off
-    /// from the Phase-3 restrained palette).
     private var brandDisc: some View {
-        Image(systemName: "drop.fill")
-            .font(.system(size: 40, weight: .semibold))
-            .foregroundStyle(brandGradient)
-            .frame(width: 84, height: 84)
-            .glassEffect(
-                .regular.tint(brandBlue.opacity(0.18)),
-                in: .circle
-            )
-            .overlay(
-                Circle().strokeBorder(
-                    LinearGradient(
-                        colors: [brandBlueLight.opacity(0.55), brandBlue.opacity(0.55)],
-                        startPoint: .topLeading, endPoint: .bottomTrailing
-                    ),
-                    lineWidth: 0.75
-                )
-            )
-            .shadow(color: brandBlue.opacity(0.35), radius: 18, y: 6)
+        Image("BrandIcon")
+            .resizable()
+            .frame(width: 88, height: 88)
+            .clipShape(.rect(cornerRadius: DSRadius.card))
             .accessibilityHidden(true)
     }
 
@@ -199,19 +146,6 @@ struct LoginView: View {
                 }
             }
         }
-        .overlay(
-            // Faint blue→purple rim so the primary glass card catches the
-            // light like the icon's glass, without touching the shared
-            // DSCard component.
-            RoundedRectangle(cornerRadius: DSRadius.card, style: .continuous)
-                .strokeBorder(
-                    LinearGradient(
-                        colors: [brandBlueLight.opacity(0.45), brandBlue.opacity(0.45)],
-                        startPoint: .topLeading, endPoint: .bottomTrailing
-                    ),
-                    lineWidth: 0.75
-                )
-        )
         .animation(.snappy(duration: 0.25), value: session.state)
     }
 
@@ -549,19 +483,13 @@ struct LoginView: View {
     /// status colour so the disc reads as a single visual tone
     /// rather than two competing accents.
     private func stateDisc(systemImage: String, tint: Color) -> some View {
-        Image(systemName: systemImage)
-            .font(.system(size: 24, weight: .semibold, design: .rounded))
-            .foregroundStyle(tint)
-            .frame(width: 56, height: 56)
-            .glassEffect(.regular.tint(tint.opacity(0.18)), in: .circle)
-            .overlay(Circle().strokeBorder(tint.opacity(0.22), lineWidth: 0.5))
-            .accessibilityHidden(true)
+        DSIconTile(symbol: systemImage, tint: tint)
     }
 
     // MARK: - Common buttons
 
     @ViewBuilder
-    private func signInButton(label: String, isWorking: Bool, action: @escaping () -> Void) -> some View {
+    private func signInButton(label: LocalizedStringKey, isWorking: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack {
                 if isWorking {
@@ -571,11 +499,11 @@ struct LoginView: View {
                 }
             }
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 14)
-            .background(.tint, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-            .foregroundStyle(.white)
+            .padding(.vertical, DSSpacing.xs)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.glassProminent)
+        .buttonBorderShape(.capsule)
+        .controlSize(.large)
     }
 
     private func inlineErrorLabel(_ message: String) -> some View {
@@ -648,7 +576,7 @@ private extension View {
 
 private struct IconField: View {
     let systemImage: String
-    let placeholder: String
+    let placeholder: LocalizedStringKey
     @Binding var text: String
 
     var body: some View {
@@ -664,7 +592,7 @@ private struct IconField: View {
 
 private struct IconSecureField: View {
     let systemImage: String
-    let placeholder: String
+    let placeholder: LocalizedStringKey
     @Binding var text: String
     @State private var revealed: Bool = false
 

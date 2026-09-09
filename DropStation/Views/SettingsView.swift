@@ -1,16 +1,7 @@
 import SwiftUI
 
-/// Settings on a native grouped `Form` — the iOS 26 redesign moved off
-/// the hand-rolled `ScrollView` + `DSSectionCard` stack (which
-/// approximated the system list and drifted into uncanny-valley
-/// "almost native") back to the real thing. The account block stays a
-/// distinct identity row at the top of its section — it earns the
-/// prominence — while every other section is a plain native grouped
-/// section with a footer, so the screen reads unmistakably as iOS.
-///
-/// Coloured leading SF Symbols are kept (via `settingsLabel`): the
-/// grouped-list row is the one place the native Settings idiom wants
-/// colour in the icon slot.
+/// Native grouped settings with a single primary account identity surface.
+/// Session controls keep their existing bindings and persistence behavior.
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var session: SessionStore
@@ -36,14 +27,24 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             Form {
-                if isSignedIn { accountSection }
+                if isSignedIn {
+                    Section {
+                        DSCard(.primary) { accountIdentityRow }
+                            .listRowInsets(EdgeInsets())
+                            .listRowBackground(Color.clear)
+                    }
+                    accountSection
+                }
                 appearanceSection
                 privacySection
                 feedbackSection
                 aboutSection
             }
+            .dsFormCanvas()
+            .presentationDragIndicator(.visible)
+            .presentationCornerRadius(DSRadius.hero)
             .navigationTitle("Settings")
-            .navigationBarTitleDisplayMode(.inline)
+            .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") { dismiss() }
@@ -65,13 +66,9 @@ struct SettingsView: View {
 
     // MARK: - Account
 
-    /// Identity row + the two account actions, grouped like the
-    /// Apple-ID block at the top of system Settings: the avatar/name/
-    /// status row, then Sign out, then a destructive Forget this
-    /// device. Footer carries the explanatory copy.
+    /// Account actions remain a native group below the identity hero.
     private var accountSection: some View {
         Section {
-            accountIdentityRow
             Button {
                 Task {
                     await session.logout()
@@ -96,40 +93,34 @@ struct SettingsView: View {
         HStack(spacing: DSSpacing.md) {
             DSAvatarCircle(
                 account: session.config.account.isEmpty ? "DS" : session.config.account,
-                size: 52
+                size: 60
             )
             VStack(alignment: .leading, spacing: 2) {
                 Text(session.config.account.isEmpty ? "DropStation" : session.config.account)
-                    .font(.headline.weight(.medium))
+                    .font(.title2.weight(.semibold))
                     .foregroundStyle(.primary)
                     .lineLimit(1)
                     .truncationMode(.middle)
                 HStack(spacing: 4) {
                     DSStatusDot(tint: .green)
-                    DSMetricRow(values: accountMetrics, font: .caption)
+                    Text("Online").font(.caption).foregroundStyle(.secondary)
                 }
+                Text(session.config.host)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+                    .textSelection(.enabled)
+                Text(Self.versionString).font(.caption).foregroundStyle(.tertiary)
             }
             Spacer(minLength: 0)
         }
         .padding(.vertical, DSSpacing.xs)
     }
 
-    /// "Online · nas.local · 0.5.4 (16)" — host dropped if the config
-    /// is empty (defensive). Version always surfaced for at-a-glance
-    /// debug context.
-    private var accountMetrics: [String] {
-        var values: [String] = ["Online"]
-        if !session.config.host.isEmpty {
-            values.append(session.config.host)
-        }
-        values.append(Self.versionString)
-        return values
-    }
-
     // MARK: - Appearance
 
     private var appearanceSection: some View {
-        Section {
+        Section("Appearance") {
             Picker(selection: appearance) {
                 ForEach(AppearanceMode.allCases) { mode in
                     Text(mode.label).tag(mode)
@@ -167,6 +158,8 @@ struct SettingsView: View {
             )) {
                 settingsLabel("Remember password", "key")
             }
+        } header: {
+            Text("Privacy")
         } footer: {
             Text(privacyHelperText)
         }
@@ -206,6 +199,8 @@ struct SettingsView: View {
             } label: {
                 settingsLabel("Report a bug", "ladybug")
             }
+        } header: {
+            Text("Feedback")
         } footer: {
             Text("Bug reports send via your mail app. Feature requests open on GitHub.")
         }
@@ -238,6 +233,8 @@ struct SettingsView: View {
             Link(destination: URL(string: "https://github.com/Wenzlik/DropStation")!) {
                 settingsLabel("Source on GitHub", "chevron.left.forwardslash.chevron.right", trailing: "arrow.up.right")
             }
+        } header: {
+            Text("About")
         } footer: {
             Text("© 2026 Vasek Zmrhal · MIT License")
         }
@@ -259,7 +256,10 @@ struct SettingsView: View {
             Label {
                 Text(title).foregroundStyle(tint == .red ? Color.red : .primary)
             } icon: {
-                Image(systemName: symbol).foregroundStyle(tint)
+                Image(systemName: symbol)
+                    .foregroundStyle(tint)
+                    .frame(width: 30, height: 30)
+                    .background(tint.opacity(0.10), in: .rect(cornerRadius: 9))
             }
             if let trailing {
                 Spacer(minLength: DSSpacing.sm)

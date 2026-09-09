@@ -18,20 +18,12 @@ struct ConnectionLostView: View {
 
     var body: some View {
         ZStack {
-            LinearGradient(
-                colors: [Color(.systemBackground), Color(.secondarySystemBackground)],
-                startPoint: .top, endPoint: .bottom
-            )
-            .ignoresSafeArea()
+            DSBackground()
 
             VStack(spacing: DSSpacing.lg) {
                 Spacer(minLength: 0)
 
-                Image(systemName: "wifi.exclamationmark")
-                    .font(.system(size: 56, weight: .regular))
-                    .foregroundStyle(.orange)
-                    .symbolRenderingMode(.hierarchical)
-                    .accessibilityHidden(true)
+                DSIconTile(symbol: "wifi.exclamationmark", tint: .orange)
 
                 VStack(spacing: DSSpacing.sm) {
                     Text("Connection lost")
@@ -63,10 +55,9 @@ struct ConnectionLostView: View {
                     .frame(minWidth: 180)
                     .padding(.vertical, 12)
                     .padding(.horizontal, 20)
-                    .background(.tint, in: Capsule())
-                    .foregroundStyle(.white)
+
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.glassProminent)
                 .disabled(isRetrying)
                 .padding(.top, DSSpacing.sm)
 

@@ -68,5 +68,6 @@ private struct LoggedInShell: View {
                 }
                 .tag(NavigationStore.Tab.downloads)
         }
+        .tabBarMinimizeBehavior(.never)
     }
 }

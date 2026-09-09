@@ -21,18 +21,25 @@ struct DSMetricRow: View {
     }
 
     var body: some View {
-        HStack(spacing: DSSpacing.sm) {
-            ForEach(Array(values.enumerated()), id: \.offset) { index, value in
-                if index > 0 {
-                    Text(separator)
-                        .foregroundStyle(.tertiary)
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: DSSpacing.sm) {
+                ForEach(Array(values.enumerated()), id: \.offset) { index, value in
+                    if index > 0 {
+                        Text(separator).foregroundStyle(.tertiary)
+                    }
+                    Text(value)
                 }
-                Text(value)
+            }
+            .fixedSize(horizontal: true, vertical: false)
+            VStack(alignment: .leading, spacing: DSSpacing.xs) {
+                ForEach(Array(values.enumerated()), id: \.offset) { _, value in
+                    Text(value)
+                }
             }
         }
         .font(font)
         .foregroundStyle(.secondary)
         .monospacedDigit()
-        .lineLimit(1)
+
     }
 }

@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct TaskDetailView: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @StateObject private var viewModel: TaskDetailViewModel
     @State private var showingTaskPriorityPicker = false
     /// File index whose priority picker is currently open (nil = closed).
@@ -24,6 +25,7 @@ struct TaskDetailView: View {
             }
             sourceSection
         }
+        .dsFormCanvas()
         .navigationTitle(viewModel.task.title)
         .navigationBarTitleDisplayMode(.inline)
         .refreshable { await viewModel.refresh() }
@@ -100,7 +102,7 @@ struct TaskDetailView: View {
                 HStack(spacing: DSSpacing.sm) {
                     Image(systemName: viewModel.task.displayStatusTintRaw.statusSystemImage)
                         .foregroundStyle(viewModel.task.displayStatusTintRaw.tintColor)
-                        .symbolEffect(.pulse, options: .repeating, isActive: isLive)
+                        .symbolEffect(.pulse, options: .repeating, isActive: isLive && !reduceMotion)
                     Text(viewModel.task.title).font(.headline)
                 }
                 HStack(alignment: .firstTextBaseline) {
@@ -108,7 +110,7 @@ struct TaskDetailView: View {
                     Spacer()
                     if !viewModel.task.isAtCompletion {
                         Text("\(Int(viewModel.task.progress * 100))%")
-                            .font(.title3.weight(.semibold))
+                            .font(.system(.largeTitle, design: .rounded, weight: .semibold))
                             .monospacedDigit()
                             .foregroundStyle(.primary)
                             .contentTransition(.numericText())
@@ -122,7 +124,11 @@ struct TaskDetailView: View {
                 }
                 heroThroughput
             }
-            .padding(.vertical, DSSpacing.xs)
+            .padding(DSSpacing.xl)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .glassEffect(.regular, in: .rect(cornerRadius: DSRadius.hero))
+            .listRowInsets(EdgeInsets())
+            .listRowBackground(Color.clear)
         }
     }
 
@@ -179,7 +185,7 @@ struct TaskDetailView: View {
                         } label: {
                             Label("Resume", systemImage: "play.fill").frame(maxWidth: .infinity)
                         }
-                        .buttonStyle(.borderedProminent)
+                        .buttonStyle(.glassProminent)
                     }
                     if viewModel.task.canPause {
                         Button {
@@ -433,7 +439,7 @@ struct TaskDetailView: View {
         }
     }
 
-    private func row(_ label: String, value: String) -> some View {
+    private func row(_ label: LocalizedStringKey, value: String) -> some View {
         LabeledContent(label) {
             Text(value).monospacedDigit().contentTransition(.numericText())
         }

@@ -162,8 +162,7 @@ struct DashboardView: View {
     /// `DSStatusBadge`.
     private var heroHeader: some View {
         HStack(spacing: DSSpacing.sm) {
-            Image(systemName: "externaldrive.connected.to.line.below")
-                .foregroundStyle(.secondary)
+            DSIconTile(symbol: "externaldrive.connected.to.line.below")
             Text(viewModel.hostname)
                 .font(.subheadline.weight(.medium))
                 .foregroundStyle(.primary)
@@ -187,7 +186,7 @@ struct DashboardView: View {
     private var emptyPrimary: some View {
         VStack(alignment: .leading, spacing: DSSpacing.xs) {
             Text("All caught up")
-                .font(.headline.weight(.medium))
+                .font(.title.weight(.semibold))
             Text("No active downloads")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
@@ -208,7 +207,7 @@ struct DashboardView: View {
         VStack(alignment: .leading, spacing: DSSpacing.sm) {
             HStack(alignment: .firstTextBaseline, spacing: DSSpacing.sm) {
                 Text("\(viewModel.totalTaskCount)")
-                    .font(.system(size: 44, weight: .semibold, design: .rounded))
+                    .font(.system(.largeTitle, design: .rounded, weight: .semibold))
                     .monospacedDigit()
                     .contentTransition(.numericText())
                     .foregroundStyle(.primary)
@@ -302,7 +301,7 @@ struct DashboardView: View {
                 .font(.system(size: 28, weight: .semibold, design: .rounded))
                 .foregroundStyle(heroFocalTint)
             Text(formattedRate(heroFocalBytesPerSecond))
-                .font(.system(size: 44, weight: .semibold, design: .rounded))
+                .font(.system(.largeTitle, design: .rounded, weight: .semibold))
                 .monospacedDigit()
                 .contentTransition(.numericText())
                 .foregroundStyle(.primary)
@@ -364,10 +363,10 @@ struct DashboardView: View {
     private var activeMetricValues: [String] {
         var values: [String] = []
         if viewModel.activeCount > 0 {
-            values.append("\(viewModel.activeCount) active")
+            values.append(String(localized: "\(viewModel.activeCount) active"))
         }
         if let bytes = viewModel.freeDiskBytes {
-            values.append("\(formattedSize(bytes)) free")
+            values.append(String(localized: "\(formattedSize(bytes)) free"))
         }
         return values
     }
@@ -375,7 +374,7 @@ struct DashboardView: View {
     private var idleMetricValues: [String] {
         var values: [String] = []
         if let bytes = viewModel.freeDiskBytes {
-            values.append("\(formattedSize(bytes)) free")
+            values.append(String(localized: "\(formattedSize(bytes)) free"))
         }
         return values
     }
@@ -389,13 +388,13 @@ struct DashboardView: View {
         let pausedCount = viewModel.tasks.filter { TaskFilter.paused.matches($0) }.count
         let finishedCount = viewModel.tasks.filter { TaskFilter.finished.matches($0) }.count
         if pausedCount > 0 {
-            values.append("\(pausedCount) paused")
+            values.append(String(localized: "\(pausedCount) paused"))
         }
         if finishedCount > 0 {
-            values.append("\(finishedCount) finished")
+            values.append(String(localized: "\(finishedCount) finished"))
         }
         if let bytes = viewModel.freeDiskBytes {
-            values.append("\(formattedSize(bytes)) free")
+            values.append(String(localized: "\(formattedSize(bytes)) free"))
         }
         return values
     }
@@ -455,18 +454,20 @@ struct DashboardView: View {
     private func activeRow(for task: DownloadTask) -> some View {
         VStack(alignment: .leading, spacing: DSSpacing.xs) {
             DSActivityRow(
-                title: task.title,
+                title: ReleaseName(parsing: task.title).title,
                 metadata: activeMetadataLine(for: task),
                 iconSystemName: task.displayStatusTintRaw.statusSystemImage,
                 iconTint: task.displayStatusTintRaw.tintColor
             )
             // Sliver tucked under the metadata, indented past the
             // icon disc so it traces the title column.
-            DSProgressSliver(
-                value: task.progress,
-                tint: task.displayStatusTintRaw.tintColor
-            )
-            .padding(.leading, 36 + DSSpacing.md)
+            if task.progress < 1 {
+                DSProgressSliver(
+                    value: task.progress,
+                    tint: task.displayStatusTintRaw.tintColor
+                )
+                .padding(.leading, 48 + DSSpacing.md)
+            }
         }
     }
 
@@ -585,18 +586,12 @@ struct DashboardView: View {
     /// Sum: disc width + DSActivityRow's internal disc-to-text gap
     /// + DSGroupedRows' container leading padding.
     private var activityRowDividerInset: CGFloat {
-        36 + DSSpacing.md + DSSpacing.lg
+        48 + DSSpacing.md + DSSpacing.lg
     }
 
     // MARK: - Helpers
 
-    private var backgroundGradient: some View {
-        LinearGradient(
-            colors: [Color(.systemBackground), Color(.secondarySystemBackground)],
-            startPoint: .top,
-            endPoint: .bottom
-        )
-    }
+    private var backgroundGradient: some View { DSBackground() }
 
     private func formattedSize(_ bytes: Int64) -> String {
         ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file)
@@ -634,7 +629,7 @@ struct DashboardView: View {
     /// without touching DSActivityRow).
     private func activityRow(for task: DownloadTask) -> some View {
         DSActivityRow(
-            title: task.title,
+            title: ReleaseName(parsing: task.title).title,
             metadata: metadataLine(for: task),
             iconSystemName: task.displayStatusTintRaw.statusSystemImage,
             iconTint: task.displayStatusTintRaw.tintColor
