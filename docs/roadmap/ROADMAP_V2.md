@@ -104,6 +104,13 @@ Not:
 
 ---
 
+# Current visual pass — next unreleased version
+
+- Cohesive iOS 27-inspired visual pass across login, dashboard, downloads,
+  detail, Add download, Settings and recovery states; new original app icon.
+- Keep iOS 26 deployment and auth/API behavior. Implementation follows
+  [the visual brief](../ux/redesign-ios27.md).
+
 # Current beta hardening
 
 ## High priority
