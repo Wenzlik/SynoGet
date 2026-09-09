@@ -56,7 +56,7 @@ struct DSActivityRow: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .monospacedDigit()
-                        .lineLimit(1)
+                        .lineLimit(2)
                 }
             }
             Spacer(minLength: 0)
@@ -69,13 +69,7 @@ struct DSActivityRow: View {
     /// status colour reads as a single unified accent rather
     /// than two competing tones.
     private var iconDisc: some View {
-        Image(systemName: iconSystemName)
-            .font(.body.weight(.semibold))
-            .foregroundStyle(iconTint)
-            .frame(width: 36, height: 36)
-            .glassEffect(
-                .regular.tint(iconTint.opacity(0.18)),
-                in: .circle
-            )
+        DSIconTile(symbol: iconSystemName, tint: iconTint)
+            .frame(width: 48, height: 48)
     }
 }

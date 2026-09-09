@@ -41,7 +41,7 @@ struct DSGroupedRows<Item, RowContent: View>: View {
                 }
                 row(item)
                     .padding(.horizontal, DSSpacing.lg)
-                    .padding(.vertical, DSSpacing.sm)
+                    .padding(.vertical, DSSpacing.lg)
             }
         }
         .background(.regularMaterial, in: shape)
