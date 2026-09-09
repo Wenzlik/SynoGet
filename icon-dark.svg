@@ -2,8 +2,8 @@
 <!-- Original DropStation dock monogram. Two open storage rails form a D;
      the floating center capsule is the arriving data block. System masks corners. -->
 <defs>
- <linearGradient id="bg" x2="0.8" y2="1"><stop stop-color="#edf5ff"/><stop offset="1" stop-color="#c6dcf5"/></linearGradient>
- <linearGradient id="rail" x2="0.8" y2="1"><stop stop-color="#2267d5"/><stop offset="1" stop-color="#123c87"/></linearGradient>
+ <linearGradient id="bg" x2="0.8" y2="1"><stop stop-color="#101d34"/><stop offset="1" stop-color="#071020"/></linearGradient>
+ <linearGradient id="rail" x2="0.8" y2="1"><stop stop-color="#9edaff"/><stop offset="1" stop-color="#477ce6"/></linearGradient>
 </defs>
 <path fill="url(#bg)" d="M0 0h1024v1024H0z"/>
 <path d="M300 290 H520 C680 290 756 376 756 512 S680 734 520 734 H300" fill="none" stroke="#000" stroke-opacity=".08" stroke-width="112" stroke-linecap="round" transform="translate(0 18)"/>
