@@ -104,6 +104,12 @@ Not:
 
 ---
 
+# Implemented — awaiting release
+
+The iOS 27-inspired visual pass is recorded in [CHANGELOG.md](../../CHANGELOG.md)
+under Unreleased. See [the visual brief](../ux/redesign-ios27.md) and
+[validation notes](../reviews/ui-review-ios27.md). Device/NAS sign-off remains.
+
 # Current beta hardening
 
 ## High priority

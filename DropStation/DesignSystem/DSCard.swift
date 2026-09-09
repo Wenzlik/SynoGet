@@ -39,7 +39,7 @@ struct DSCard<Content: View>: View {
 
     var body: some View {
         content
-            .padding(DSSpacing.lg)
+            .padding(style == .primary ? DSSpacing.xl : DSSpacing.lg)
             .frame(maxWidth: .infinity, alignment: .leading)
             .modifier(SurfaceModifier(style: style))
     }
@@ -52,13 +52,9 @@ private struct SurfaceModifier: ViewModifier {
     let style: DSCardStyle
 
     func body(content: Content) -> some View {
-        let shape = RoundedRectangle(cornerRadius: DSRadius.card, style: .continuous)
+        let shape = RoundedRectangle(cornerRadius: style == .primary ? DSRadius.hero : DSRadius.card, style: .continuous)
         switch style {
         case .primary:
-            // Match the pre-Phase-3 DSCard look exactly so existing
-            // call sites that switch to .primary don't shift
-            // visually. Shadow + larger radius are reserved for the
-            // Phase-3.2 hero adoption.
             content.glassEffect(.regular, in: shape)
         case .secondary:
             content

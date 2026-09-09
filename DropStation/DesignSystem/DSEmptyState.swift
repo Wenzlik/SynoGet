@@ -21,7 +21,8 @@ struct DSEmptyState: View {
 
     var body: some View {
         ContentUnavailableView {
-            Label(title, systemImage: systemImage)
+            DSIconTile(symbol: systemImage)
+            Text(title).font(.title2.weight(.semibold))
         } description: {
             if let message {
                 Text(message)

@@ -13,8 +13,9 @@ enum DSSpacing {
 }
 
 enum DSRadius {
-    static let tile: CGFloat = 14
-    static let card: CGFloat = 18
+    static let tile: CGFloat = 18
+    static let card: CGFloat = 28
+    static let hero: CGFloat = 34
 }
 
 extension Color {
@@ -43,4 +44,36 @@ extension Color {
             return UIColor.separator.withAlphaComponent(0.85)
         }
     })
+}
+
+/// A shared canvas leaves glass to the native navigation and the primary card.
+struct DSBackground: View {
+    var body: some View {
+        LinearGradient(
+            colors: [Color(.systemGroupedBackground), Color(.secondarySystemGroupedBackground)],
+            startPoint: .topLeading, endPoint: .bottomTrailing
+        ).ignoresSafeArea()
+    }
+}
+
+struct DSIconTile: View {
+    let symbol: String
+    var tint: Color = .accentColor
+    var body: some View {
+        Image(systemName: symbol)
+            .font(.title3.weight(.semibold))
+            .foregroundStyle(tint)
+            .frame(width: 48, height: 48)
+            .background(tint.opacity(0.10), in: .rect(cornerRadius: DSRadius.tile))
+            .accessibilityHidden(true)
+    }
+}
+
+extension View {
+    /// Keep native Form interactions while matching the main screen canvas.
+    func dsFormCanvas() -> some View {
+        self.scrollContentBackground(.hidden)
+            .background(DSBackground())
+            .listSectionSpacing(DSSpacing.xl)
+    }
 }

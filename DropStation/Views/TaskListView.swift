@@ -28,12 +28,8 @@ struct TaskListView: View {
             ZStack {
                 backgroundGradient.ignoresSafeArea()
                 List {
-                    // Single grouped section — one rounded card on the screen,
-                    // hairline dividers between rows (the DSGroupedRows visual
-                    // pattern). `.swipeActions` and `.refreshable` aren't
-                    // available outside List, so we keep List but drop the
-                    // per-row glass and let `.insetGrouped` provide the
-                    // chrome.
+                    // Native List preserves swipe actions and refresh while shared
+                    // rounded row surfaces establish the content rhythm.
                     Section {
                         ForEach(viewModel.filteredTasks) { task in
                             TaskRow(task: task)
@@ -96,10 +92,10 @@ struct TaskListView: View {
             }
             .overlay {
                 if viewModel.filteredTasks.isEmpty, !viewModel.isLoading {
-                    ContentUnavailableView(
-                        emptyStateTitle,
-                        systemImage: emptyStateIcon,
-                        description: Text(emptyStateMessage)
+                    DSEmptyState(
+                        title: LocalizedStringKey(emptyStateTitle),
+                        message: LocalizedStringKey(emptyStateMessage),
+                        systemImage: emptyStateIcon
                     )
                 }
             }
@@ -190,12 +186,7 @@ struct TaskListView: View {
         }
     }
 
-    private var backgroundGradient: some View {
-        LinearGradient(
-            colors: [Color(.systemBackground), Color(.secondarySystemBackground)],
-            startPoint: .top, endPoint: .bottom
-        )
-    }
+    private var backgroundGradient: some View { DSBackground() }
 
     // MARK: - Filter chips
 
@@ -364,6 +355,7 @@ struct TaskListView: View {
 /// The card sits on `.regularMaterial` with a hairline, spaced from
 /// its neighbours by the list-row insets, so the screen breathes.
 private struct TaskRow: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let task: DownloadTask
 
     private var release: ReleaseName { ReleaseName(parsing: task.title) }
@@ -384,13 +376,13 @@ private struct TaskRow: View {
                 // a seeding task sits at 100 %, so a full-width bar on
                 // every completed card was pure noise.
                 if isDownloading {
-                    DSProgressSliver(value: task.progress, tint: tint)
+                    DSProgressSliver(value: task.progress, tint: tint, height: 4)
                         .padding(.top, 1)
                 }
             }
             Spacer(minLength: 0)
         }
-        .padding(DSSpacing.md)
+        .padding(DSSpacing.lg)
         .background(
             RoundedRectangle(cornerRadius: DSRadius.card, style: .continuous)
                 .fill(.regularMaterial)
@@ -406,14 +398,14 @@ private struct TaskRow: View {
     /// status glyph, pulsing while actively transferring. Reads like
     /// a small poster/app tile and gives the row a confident anchor.
     private var statusTile: some View {
-        RoundedRectangle(cornerRadius: 13, style: .continuous)
+        RoundedRectangle(cornerRadius: DSRadius.tile, style: .continuous)
             .fill(tint.opacity(0.16))
             .frame(width: 48, height: 48)
             .overlay(
                 Image(systemName: task.displayStatusTintRaw.statusSystemImage)
                     .font(.title3.weight(.semibold))
                     .foregroundStyle(tint)
-                    .symbolEffect(.pulse, options: .repeating, isActive: isDownloading)
+                    .symbolEffect(.pulse, options: .repeating, isActive: isDownloading && !reduceMotion)
             )
             .accessibilityHidden(true)
     }
@@ -422,7 +414,7 @@ private struct TaskRow: View {
         HStack(alignment: .firstTextBaseline, spacing: 6) {
             Text(release.title)
                 .font(.headline)
-                .lineLimit(1)
+                .lineLimit(2)
                 .truncationMode(.tail)
             if let year = release.year {
                 Text(year)
@@ -444,9 +436,9 @@ private struct TaskRow: View {
                 .foregroundStyle(.secondary)
             if let speed = liveSpeed, speed > 0 {
                 Text("·").font(.caption).foregroundStyle(.tertiary)
-                Text("↓ \(formattedSpeed(speed))")
+                Text("\(liveDirection) \(formattedSpeed(speed))")
                     .font(.caption)
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(.secondary)
                     .monospacedDigit()
                     .contentTransition(.numericText())
             }
@@ -472,9 +464,13 @@ private struct TaskRow: View {
         task.status == .downloading
     }
 
+    private var liveDirection: String { task.status == .seeding ? "↑" : "↓" }
+
     private var liveSpeed: Int64? {
         guard isLive else { return nil }
-        return task.additional?.transfer?.speedDownload.value
+        return task.status == .seeding
+            ? task.additional?.transfer?.speedUpload.value
+            : task.additional?.transfer?.speedDownload.value
     }
 
     private func formattedSize(_ bytes: Int64) -> String {
@@ -486,10 +482,7 @@ private struct TaskRow: View {
     }
 }
 
-/// Small quality chip ("4K", "HDR", "Atmos"). Resolution chips take
-/// the accent, HDR/Dolby Vision an amber tint, everything else a
-/// neutral fill — a little colour without turning the row into a
-/// rainbow.
+/// Quiet quality chips keep semantic color reserved for task status.
 private struct TagPill: View {
     let text: String
 
@@ -503,13 +496,6 @@ private struct TagPill: View {
     }
 
     private var palette: (fg: Color, bg: Color) {
-        switch text {
-        case "4K", "1080p", "720p":
-            return (.accentColor, Color.accentColor.opacity(0.14))
-        case "HDR", "Dolby Vision":
-            return (.orange, Color.orange.opacity(0.16))
-        default:
-            return (Color.primary.opacity(0.7), Color.primary.opacity(0.07))
-        }
+        (Color.primary.opacity(0.7), Color.primary.opacity(0.06))
     }
 }

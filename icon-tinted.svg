@@ -1,25 +1,14 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
-  <!--
-    Tinted Home Screen variant (iOS 18+). iOS expects a single-color silhouette
-    on a transparent background; the system applies the user's tint.
-  -->
-  <rect width="1024" height="1024" fill="none"/>
-
-  <!-- Arrow shaft -->
-  <rect x="416" y="200" width="192" height="320" rx="32" ry="32" fill="#ffffff"/>
-
-  <!-- Arrowhead chevron -->
-  <path d="M 256 480
-           L 512 800
-           L 768 480
-           L 640 480
-           L 640 460
-           L 384 460
-           L 384 480
-           Z"
-        fill="#ffffff"/>
-
-  <!-- Tray / floor -->
-  <rect x="200" y="850" width="624" height="80" rx="40" ry="40" fill="#ffffff"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+<!-- Original DropStation dock monogram. Two open storage rails form a D;
+     the floating center capsule is the arriving data block. System masks corners. -->
+<defs>
+ <linearGradient id="bg" x2="0.8" y2="1"><stop stop-color="#303030"/><stop offset="1" stop-color="#101010"/></linearGradient>
+ <linearGradient id="rail" x2="0.8" y2="1"><stop stop-color="#ffffff"/><stop offset="1" stop-color="#bdbdbd"/></linearGradient>
+</defs>
+<path fill="url(#bg)" d="M0 0h1024v1024H0z"/>
+<path d="M300 290 H520 C680 290 756 376 756 512 S680 734 520 734 H300" fill="none" stroke="#000" stroke-opacity=".08" stroke-width="112" stroke-linecap="round" transform="translate(0 18)"/>
+<path d="M300 282 H520 C680 282 756 370 756 512 S680 742 520 742 H300" fill="none" stroke="url(#rail)" stroke-width="104" stroke-linecap="round"/>
+<path d="M298 276 H514 C671 276 747 366 747 495" fill="none" stroke="#fff" stroke-opacity=".28" stroke-width="6" stroke-linecap="round"/>
+<rect x="246" y="426" width="310" height="172" rx="86" fill="url(#rail)"/>
+<path d="M320 448h151" stroke="#fff" stroke-opacity=".35" stroke-width="6" stroke-linecap="round"/>
 </svg>

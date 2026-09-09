@@ -19,15 +19,16 @@ struct DSHeroCard<Header: View, Primary: View>: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: DSSpacing.lg) {
+        VStack(alignment: .leading, spacing: DSSpacing.xl) {
             header
+            Divider().overlay(Color.dsSurfaceHairline)
             primary
         }
         .padding(DSSpacing.xl)
         .frame(maxWidth: .infinity, alignment: .leading)
         .glassEffect(
             .regular,
-            in: .rect(cornerRadius: DSRadius.card, style: .continuous)
+            in: .rect(cornerRadius: DSRadius.hero, style: .continuous)
         )
     }
 }

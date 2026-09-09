@@ -10,6 +10,7 @@ import SwiftUI
 /// reserved for "live, currently happening" states (e.g. an
 /// actively-downloading hero). No custom animation engine.
 struct DSStatusDot: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let tint: Color
     let pulsing: Bool
     let size: CGFloat
@@ -24,7 +25,7 @@ struct DSStatusDot: View {
         Image(systemName: "circle.fill")
             .font(.system(size: size))
             .foregroundStyle(tint)
-            .symbolEffect(.pulse, options: .repeating, isActive: pulsing)
+            .symbolEffect(.pulse, options: .repeating, isActive: pulsing && !reduceMotion)
             .accessibilityHidden(true)
     }
 }

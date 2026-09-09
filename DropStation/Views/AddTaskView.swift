@@ -46,6 +46,14 @@ struct AddTaskView: View {
         NavigationStack {
             Form {
                 Section {
+                    HStack(spacing: DSSpacing.lg) {
+                        DSIconTile(symbol: "tray.and.arrow.down")
+                        Text("New download").font(.title2.weight(.semibold))
+                    }
+                    .padding(.vertical, DSSpacing.sm)
+                    .listRowBackground(Color.clear)
+                }
+                Section {
                     Picker("Source", selection: $mode) {
                         ForEach(Mode.allCases) { Text($0.label).tag($0) }
                     }
@@ -159,7 +167,7 @@ struct AddTaskView: View {
                         }
                         .frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(.glassProminent)
                     .buttonBorderShape(.capsule)
                     .controlSize(.large)
                     .disabled(!canSubmit || isSubmitting)
@@ -167,6 +175,9 @@ struct AddTaskView: View {
                     .listRowBackground(Color.clear)
                 }
             }
+            .dsFormCanvas()
+            .presentationDragIndicator(.visible)
+            .presentationCornerRadius(DSRadius.hero)
             .navigationTitle("New download")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

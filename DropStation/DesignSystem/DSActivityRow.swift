@@ -14,7 +14,7 @@ import SwiftUI
 ///
 /// Visual hierarchy:
 ///
-///   - Icon disc — 36 pt subtle Liquid Glass circle tinted by the
+///   - Icon tile — 48 pt quiet rounded square tinted by the
 ///     caller's status colour, monochrome glyph inside.
 ///   - Title — `.subheadline.weight(.medium)`, primary, up to two
 ///     lines, middle-truncation so the prefix and format suffix
@@ -56,26 +56,16 @@ struct DSActivityRow: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .monospacedDigit()
-                        .lineLimit(1)
+                        .lineLimit(2)
                 }
             }
             Spacer(minLength: 0)
         }
     }
 
-    /// Subtly tinted glass disc with the caller's SF Symbol
-    /// centred. Tint drives both the glyph foreground and the
-    /// disc background (the latter at 18 % opacity) so the
-    /// status colour reads as a single unified accent rather
-    /// than two competing tones.
+    /// A quiet status tile leaves the primary glass to the hero.
     private var iconDisc: some View {
-        Image(systemName: iconSystemName)
-            .font(.body.weight(.semibold))
-            .foregroundStyle(iconTint)
-            .frame(width: 36, height: 36)
-            .glassEffect(
-                .regular.tint(iconTint.opacity(0.18)),
-                in: .circle
-            )
+        DSIconTile(symbol: iconSystemName, tint: iconTint)
+            .frame(width: 48, height: 48)
     }
 }

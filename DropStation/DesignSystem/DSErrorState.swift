@@ -22,7 +22,8 @@ struct DSErrorState: View {
     var body: some View {
         VStack(spacing: DSSpacing.md) {
             ContentUnavailableView {
-                Label(title, systemImage: "exclamationmark.triangle")
+                DSIconTile(symbol: "exclamationmark.triangle", tint: .orange)
+                Text(title).font(.title2.weight(.semibold))
             } description: {
                 if let message {
                     Text(message)
