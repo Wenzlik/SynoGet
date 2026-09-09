@@ -104,12 +104,11 @@ Not:
 
 ---
 
-# Current visual pass — next unreleased version
+# Implemented — awaiting release
 
-- Cohesive iOS 27-inspired visual pass across login, dashboard, downloads,
-  detail, Add download, Settings and recovery states; new original app icon.
-- Keep iOS 26 deployment and auth/API behavior. Implementation follows
-  [the visual brief](../ux/redesign-ios27.md).
+The iOS 27-inspired visual pass is recorded in [CHANGELOG.md](../../CHANGELOG.md)
+under Unreleased. See [the visual brief](../ux/redesign-ios27.md) and
+[validation notes](../reviews/ui-review-ios27.md). Device/NAS sign-off remains.
 
 # Current beta hardening
 

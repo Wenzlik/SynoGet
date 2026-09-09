@@ -38,7 +38,8 @@ Shipped on `main` since 0.5.0:
 - ✅ **Czech localization** — String Catalog with 221 keys, full
   Czech translation pass for the 0.5.3 release
 
-Current work is beta hardening, not redesign:
+Current work includes beta hardening; the requested visual refresh is tracked
+in the full roadmap and the Unreleased changelog:
 
 - ⏳ Run the TestFlight smoke checklist on the installed build
 - ⏳ Watch TestFlight crashes / hangs after daily use
